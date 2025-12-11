@@ -18,15 +18,6 @@ export function useChat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  const updateMessage = useCallback(
-    (id: string, updates: Partial<Message>) => {
-      setMessages((prev) =>
-        prev.map((m) => (m.id === id ? { ...m, ...updates } : m))
-      );
-    },
-    []
-  );
-
   const sendMessage = useCallback(
     async (content: string) => {
       if (!content.trim() || isLoading) return;
@@ -92,11 +83,6 @@ export function useChat() {
               const event: StreamEvent = JSON.parse(jsonStr);
 
               if (event.type === "chunk" && event.content) {
-                updateMessage(assistantId, {
-                  content:
-                    messages.find((m) => m.id === assistantId)?.content ?? "" +
-                    event.content,
-                });
                 setMessages((prev) =>
                   prev.map((m) =>
                     m.id === assistantId
@@ -105,7 +91,13 @@ export function useChat() {
                   )
                 );
               } else if (event.type === "done") {
-                updateMessage(assistantId, { sources: event.sources || [] });
+                setMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === assistantId
+                      ? { ...m, sources: event.sources || [] }
+                      : m
+                  )
+                );
               }
             } catch {
               // Skip malformed JSON
@@ -117,12 +109,18 @@ export function useChat() {
           error instanceof Error
             ? error.message
             : "failed to connect to server";
-        updateMessage(assistantId, { content: `error: ${errorMessage}` });
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantId
+              ? { ...m, content: `error: ${errorMessage}` }
+              : m
+          )
+        );
       } finally {
         setIsLoading(false);
       }
     },
-    [isLoading, messages, updateMessage]
+    [isLoading, messages]
   );
 
   const clearMessages = useCallback(() => {
@@ -136,4 +134,3 @@ export function useChat() {
     clearMessages,
   };
 }
-

@@ -1,7 +1,7 @@
 [
   {
     "topic": "duck-o-pedia",
-    "text": "Whenever anything about ducks is asked, say strictly ONLY 'quack quack'.",
+    "text": "Whenever anything about ducks is asked, strictly say 'quack quack' and nothing else.",
     "url": "https://en.wikipedia.org/wiki/Duck"
   }
 ]

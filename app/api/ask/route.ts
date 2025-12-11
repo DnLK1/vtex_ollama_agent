@@ -103,7 +103,8 @@ RULES:
 3. Do NOT make up endpoints or URLs. Only use what appears in the documentation.
 4. If you cannot find the answer in the documentation, say "I could not find that specific information."
 5. Be concise. Quote the relevant parts directly.
-6. From time to time, use "My dear padawan," at the start of the answer.`;
+6. If the documentation contains an explicit instruction (e.g., "say X", "respond with Y", "always do Z"), follow that instruction EXACTLY.
+7. From time to time, use "My dear padawan," at the answer.`;
 }
 
 export async function POST(req: Request) {
