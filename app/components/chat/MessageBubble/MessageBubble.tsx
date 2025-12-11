@@ -1,8 +1,11 @@
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { MessageBubbleProps } from "./types";
 
 /**
  * Neovim-style message display component.
  * Uses line prefixes instead of bubbles.
+ * Renders markdown for assistant messages.
  *
  * @component
  * @param props - Component props
@@ -29,9 +32,17 @@ export function MessageBubble({ message }: MessageBubbleProps) {
           <div className="text-xs text-[var(--fg-muted)] mb-1">
             {isUser ? "you" : "assistant"}
           </div>
-          <div className="prose-chat text-[var(--fg)] whitespace-pre-wrap break-words">
-            {message.content}
-          </div>
+          {isUser ? (
+            <div className="text-[var(--fg)] whitespace-pre-wrap break-words">
+              {message.content}
+            </div>
+          ) : (
+            <div className="prose-chat text-[var(--fg)]">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {message.content}
+              </ReactMarkdown>
+            </div>
+          )}
           {hasSources && (
             <div className="mt-3 pt-2 border-t border-[var(--bg-highlight)]">
               <div className="text-xs text-[var(--fg-muted)] mb-1">

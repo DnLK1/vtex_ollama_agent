@@ -156,6 +156,11 @@ pre, code {
   font-family: inherit;
 }
 
+/* Markdown prose styles */
+.prose-chat {
+  line-height: 1.7;
+}
+
 .prose-chat p {
   margin: 0.5em 0;
 }
@@ -170,14 +175,26 @@ pre, code {
 
 .prose-chat code {
   color: var(--orange);
+  background: var(--bg-hard);
+  padding: 0.1em 0.3em;
+  border-radius: 3px;
+  font-size: 0.9em;
 }
 
 .prose-chat pre {
   background: var(--bg-hard);
   border-left: 2px solid var(--fg-muted);
   padding: 0.75em 1em;
-  margin: 0.5em 0;
+  margin: 0.75em 0;
   overflow-x: auto;
+  border-radius: 4px;
+}
+
+.prose-chat pre code {
+  background: none;
+  padding: 0;
+  color: var(--fg);
+  font-size: 0.85em;
 }
 
 .prose-chat ul, .prose-chat ol {
@@ -185,12 +202,77 @@ pre, code {
   padding-left: 1.5em;
 }
 
+.prose-chat li {
+  margin: 0.25em 0;
+}
+
+.prose-chat li::marker {
+  color: var(--fg-muted);
+}
+
 .prose-chat strong {
   color: var(--yellow);
   font-weight: 600;
 }
 
+.prose-chat em {
+  color: var(--fg-dim);
+  font-style: italic;
+}
+
 .prose-chat a {
   color: var(--blue);
   text-decoration: underline;
+}
+
+.prose-chat a:hover {
+  color: var(--fg);
+}
+
+.prose-chat h1, .prose-chat h2, .prose-chat h3 {
+  color: var(--green);
+  margin: 1em 0 0.5em 0;
+  font-weight: 600;
+}
+
+.prose-chat h1:first-child,
+.prose-chat h2:first-child,
+.prose-chat h3:first-child {
+  margin-top: 0;
+}
+
+.prose-chat h1 { font-size: 1.3em; }
+.prose-chat h2 { font-size: 1.15em; }
+.prose-chat h3 { font-size: 1.05em; }
+
+.prose-chat blockquote {
+  border-left: 3px solid var(--fg-muted);
+  margin: 0.75em 0;
+  padding-left: 1em;
+  color: var(--fg-dim);
+}
+
+.prose-chat hr {
+  border: none;
+  border-top: 1px solid var(--bg-highlight);
+  margin: 1em 0;
+}
+
+.prose-chat table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.75em 0;
+  font-size: 0.9em;
+}
+
+.prose-chat th, .prose-chat td {
+  border: 1px solid var(--bg-highlight);
+  padding: 0.5em 0.75em;
+  text-align: left;
+}
+
+.prose-chat th {
+  background: var(--bg-soft);
+  color: var(--yellow);
+  font-weight: 600;
 }

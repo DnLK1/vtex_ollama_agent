@@ -1,13 +1,7 @@
-import { EmptyStateProps } from "./types";
-
 /**
  * Neovim-style empty buffer display.
- *
- * @component
- * @param props - Component props
- * @returns The empty state component
  */
-export function EmptyState({}: EmptyStateProps) {
+export function EmptyState() {
   return (
     <div className="py-8 text-[var(--fg-muted)]">
       <div className="space-y-1">

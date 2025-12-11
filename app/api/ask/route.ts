@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { queryDocs } from "@/lib/chroma";
+import { MIN_RELEVANCE_SCORE, DEFAULT_TOP_K } from "@/lib/constants";
 import aliases from "@/data/aliases.json";
 
 const OLLAMA_HOST = process.env.OLLAMA_HOST || "http://localhost:11434";
-const MIN_RELEVANCE_SCORE = 0.1;
+const DEFAULT_MODEL = process.env.OLLAMA_MODEL || "llama3.1:8b";
 
 interface Message {
   role: "system" | "user" | "assistant";
@@ -15,6 +16,30 @@ interface RetrievedDoc {
   source?: string;
   url?: string;
   score: number;
+}
+
+interface Source {
+  name: string;
+  url: string;
+}
+
+/**
+ * Extracts unique sources from retrieved docs above relevance threshold
+ */
+function extractSources(docs: RetrievedDoc[]): Source[] {
+  const sourceMap = new Map<string, string>();
+
+  for (const doc of docs) {
+    const name = doc.source?.trim();
+    const url = doc.url?.trim();
+    const isRelevant = doc.score >= MIN_RELEVANCE_SCORE;
+
+    if (name && url && isRelevant && !sourceMap.has(name)) {
+      sourceMap.set(name, url);
+    }
+  }
+
+  return Array.from(sourceMap.entries()).map(([name, url]) => ({ name, url }));
 }
 
 /**
@@ -85,10 +110,10 @@ export async function POST(req: Request) {
   try {
     const {
       messages,
-      model = "llama3.1:8b",
+      model = DEFAULT_MODEL,
       stream = false,
       useRAG = true,
-      topK = 3,
+      topK = DEFAULT_TOP_K,
     } = await req.json();
 
     if (!messages || !Array.isArray(messages)) {
@@ -99,7 +124,7 @@ export async function POST(req: Request) {
     }
 
     let augmentedMessages: Message[] = [...messages];
-    let sources: Array<{ name: string; url: string }> = [];
+    let sources: Source[] = [];
 
     const lastUserMessage = useRAG
       ? [...messages].reverse().find((m: Message) => m.role === "user")
@@ -109,26 +134,13 @@ export async function POST(req: Request) {
       try {
         const expandedQuery = expandQuery(lastUserMessage.content);
         const relevantDocs = await queryDocs(expandedQuery, topK);
-        const systemPrompt = buildSystemPrompt(relevantDocs);
 
         augmentedMessages = [
-          { role: "system", content: systemPrompt },
+          { role: "system", content: buildSystemPrompt(relevantDocs) },
           ...messages.filter((m: Message) => m.role !== "system"),
         ];
 
-        const sourceMap = new Map<string, string>();
-        for (const doc of relevantDocs) {
-          const name = doc.source?.trim();
-          const url = doc.url?.trim();
-          const isRelevant = doc.score >= MIN_RELEVANCE_SCORE;
-          if (name && url && isRelevant && !sourceMap.has(name)) {
-            sourceMap.set(name, url);
-          }
-        }
-        sources = Array.from(sourceMap.entries()).map(([name, url]) => ({
-          name,
-          url,
-        }));
+        sources = extractSources(relevantDocs);
       } catch (ragError) {
         console.warn(
           "RAG retrieval failed, continuing without context:",
@@ -198,10 +210,20 @@ export async function POST(req: Request) {
             const json = JSON.parse(line);
             const chunk = json.message?.content ?? "";
 
-            controller.enqueue(encoder.encode(`data: ${chunk}\n\n`));
+            controller.enqueue(
+              encoder.encode(
+                `data: ${JSON.stringify({ type: "chunk", content: chunk })}\n\n`
+              )
+            );
           }
         }
 
+        // Send sources as final event
+        controller.enqueue(
+          encoder.encode(
+            `data: ${JSON.stringify({ type: "done", sources })}\n\n`
+          )
+        );
         controller.close();
       },
     });
@@ -209,6 +231,8 @@ export async function POST(req: Request) {
     return new Response(streamBody, {
       headers: {
         "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
       },
     });
   } catch (error: unknown) {

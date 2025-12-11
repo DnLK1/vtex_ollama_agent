@@ -14,8 +14,6 @@ export { ThemeSelector } from "./ThemeSelector";
 // Types
 export type { Message, Source } from "./types";
 export type { HeaderProps } from "./Header";
-export type { TypingIndicatorProps } from "./TypingIndicator";
 export type { MessageBubbleProps } from "./MessageBubble";
-export type { EmptyStateProps } from "./EmptyState";
 export type { ChatInputProps } from "./ChatInput";
 export type { ThemeSelectorProps, Theme } from "./ThemeSelector";
