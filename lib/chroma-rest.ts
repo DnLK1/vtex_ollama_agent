@@ -10,6 +10,30 @@ const COLLECTION_NAME = "docs";
 const EMBEDDING_MODEL = "mxbai-embed-large";
 const CHROMA_API_BASE = `${CHROMA_HOST}/api/v2/tenants/default_tenant/databases/default_database`;
 
+/**
+ * Removes lone UTF-16 surrogates that break JSON serialization.
+ * Keeps valid surrogate pairs (high + low) intact.
+ * @param text The text to sanitize.
+ * @returns Sanitized text safe for JSON.stringify.
+ */
+function sanitizeText(text: string): string {
+  let result = "";
+  for (let i = 0; i < text.length; i++) {
+    const code = text.charCodeAt(i);
+    if (code >= 0xd800 && code <= 0xdbff) {
+      const nextCode = i + 1 < text.length ? text.charCodeAt(i + 1) : 0;
+      if (nextCode >= 0xdc00 && nextCode <= 0xdfff) {
+        result += text[i] + text[i + 1];
+        i++;
+      }
+    } else if (code >= 0xdc00 && code <= 0xdfff) {
+    } else {
+      result += text[i];
+    }
+  }
+  return result;
+}
+
 interface OllamaEmbeddingResponse {
   embedding: number[];
 }
@@ -78,8 +102,13 @@ export async function upsertDocsBatch(docs: DocToUpsert[]): Promise<number> {
 
   const collectionId = await getOrCreateCollection();
 
+  const sanitizedDocs = docs.map((d) => ({
+    ...d,
+    text: sanitizeText(d.text),
+  }));
+
   const embeddings: number[][] = [];
-  for (const doc of docs) {
+  for (const doc of sanitizedDocs) {
     embeddings.push(await getEmbedding(doc.text));
   }
 
@@ -89,10 +118,10 @@ export async function upsertDocsBatch(docs: DocToUpsert[]): Promise<number> {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        ids: docs.map((d) => d.id),
-        documents: docs.map((d) => d.text),
+        ids: sanitizedDocs.map((d) => d.id),
+        documents: sanitizedDocs.map((d) => d.text),
         embeddings,
-        metadatas: docs.map((d) => ({
+        metadatas: sanitizedDocs.map((d) => ({
           source: d.source || "",
           url: d.url || "",
         })),
