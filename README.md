@@ -29,27 +29,74 @@ pnpm dev
 
 ### Docker Mode (Full Stack)
 
+**One command setup:**
+
+```bash
+# Install dependencies and run everything
+pnpm install
+pnpm docker:setup
+```
+
+This single command will:
+
+1. Start Chroma + Ollama containers
+2. Wait for services to be ready
+3. Pull required models
+4. Ingest all documentation
+5. Build and start the app
+
+**Manual setup (step by step):**
+
 ```bash
 # 1. Install dependencies
 pnpm install
 
-# 2. Build the project container
-pnpm docker:build
+# 2. Start Chroma + Ollama ONLY (not the app yet)
+pnpm docker:services
 
-# 3. Start all services (ollama, chroma, app)
-pnpm docker:up
-
-# 4. Pull models INSIDE the Ollama container
+# 3. Pull models INSIDE the Ollama container
 pnpm docker:ollama:pull
 
-# 5. Ingest documentation (runs on host, connects to Docker services)
+# 4. Ingest documentation (runs on host, connects to Docker services on localhost)
 pnpm chroma:fresh
 
-# 6. Restart the app to pick up the ingested data
-docker compose restart app
+# 5. NOW build and start the app
+pnpm docker:app
 ```
 
+> **⚠️ Important**: The order matters! You MUST ingest data BEFORE starting the app container. The app connects to Chroma via Docker's internal network (`http://chroma:8000`), which uses the same persistent volume as localhost ingestion.
+
 > **Note**: In Docker mode, use `docker:ollama:pull` instead of `ollama:pull` since Ollama runs inside Docker. The `chroma:fresh` command works from host because Docker exposes ChromaDB (port 8000) and Ollama (port 11434) to localhost.
+
+### Restarting Docker (After Data Changes)
+
+If you've already started all services and need to re-ingest data:
+
+```bash
+# One command to re-ingest and restart
+pnpm docker:reingest
+```
+
+Or manually:
+
+```bash
+# Stop only the app (keep Chroma + Ollama running)
+docker compose stop app
+
+# Re-ingest documentation
+pnpm chroma:fresh
+
+# Restart the app
+docker compose start app
+```
+
+### Ports
+
+| Service | Internal (Docker) | External (localhost) |
+| ------- | ----------------- | -------------------- |
+| App     | 3002              | 3002                 |
+| Chroma  | 8000              | 8000                 |
+| Ollama  | 11434             | 11434                |
 
 ## Architecture
 
@@ -178,20 +225,47 @@ Use the "Duck Rule" to check if contexts are being applied correctly.
 
 ## Scripts
 
+### Docker Commands
+
+| Script                    | Description                                      |
+| ------------------------- | ------------------------------------------------ |
+| `pnpm docker:setup`       | **Full setup**: services → models → ingest → app |
+| `pnpm docker:reingest`    | Stop app, re-ingest data, restart app            |
+| `pnpm docker:services`    | Start only Chroma + Ollama (not the app)         |
+| `pnpm docker:app`         | Build and start the app container                |
+| `pnpm docker:app:restart` | Restart the app container                        |
+| `pnpm docker:up`          | Start all containers                             |
+| `pnpm docker:down`        | Stop all containers                              |
+| `pnpm docker:ollama:pull` | Pull models inside Docker Ollama container       |
+
+### Development Commands
+
+| Script       | Description                               |
+| ------------ | ----------------------------------------- |
+| `pnpm dev`   | Start development server (localhost:3000) |
+| `pnpm build` | Build for production                      |
+| `pnpm start` | Start production server                   |
+
+### Ingestion Commands
+
 | Script                        | Description                                         |
 | ----------------------------- | --------------------------------------------------- |
-| `pnpm dev`                    | Start development server                            |
-| `pnpm docker:up`              | Start Ollama + Chroma containers                    |
-| `pnpm docker:down`            | Stop containers                                     |
-| `pnpm chroma:sync`            | Ingest all docs (manual + urls + openapi + sitemap) |
+| `pnpm chroma:sync`            | Ingest all docs (urls + openapi + sitemap + manual) |
 | `pnpm chroma:fresh`           | Reset database and re-ingest everything             |
+| `pnpm chroma:reset`           | Clear all data from Chroma                          |
 | `pnpm chroma:inspect`         | View stored documents                               |
 | `pnpm chroma:inspect "query"` | Search documents                                    |
 | `pnpm ingest:manual`          | Ingest manual-docs.json                             |
 | `pnpm ingest:urls`            | Scrape and ingest urls.json                         |
 | `pnpm ingest:openapi`         | Fetch and ingest OpenAPI schemas                    |
 | `pnpm ingest:sitemap`         | Crawl and ingest sitemaps                           |
-| `pnpm ollama:pull`            | Pull required Ollama models                         |
+
+### Local Ollama Commands
+
+| Script              | Description                         |
+| ------------------- | ----------------------------------- |
+| `pnpm ollama:start` | Start Ollama server locally         |
+| `pnpm ollama:pull`  | Pull required models (local Ollama) |
 
 ## Environment Variables
 
