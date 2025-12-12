@@ -9,7 +9,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "vtex-agent",
+  title: "VTEX Agent • AI Docs Assistant",
   description: "AI-powered assistant for VTEX and FastStore documentation",
 };
 
