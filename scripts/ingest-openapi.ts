@@ -5,10 +5,9 @@ import {
   loadCache,
   saveCache,
   hashContent,
-  shouldUseCache,
+  shouldUseCacheByRemoteHash,
   updateCacheEntry,
   CACHE_PATHS,
-  DEFAULT_CACHE_TTL_DAYS,
   Cache,
 } from "../lib/cache";
 import { fetchUrl, processConcurrent } from "../lib/fetcher";
@@ -73,6 +72,11 @@ interface ChunkDoc {
   url: string;
 }
 
+interface GitHubFile {
+  name: string;
+  sha: string;
+}
+
 interface ProcessResult {
   filename: string;
   chunks: ChunkDoc[];
@@ -102,7 +106,7 @@ function getGithubApiBase(config: OpenAPIConfig): string {
   return `https://api.github.com/repos/${config.githubRepo}/contents`;
 }
 
-async function fetchOpenAPIFiles(config: OpenAPIConfig): Promise<string[]> {
+async function fetchOpenAPIFiles(config: OpenAPIConfig): Promise<GitHubFile[]> {
   console.log("📡 Fetching OpenAPI schema list from GitHub...\n");
 
   const response = await fetch(getGithubApiBase(config), {
@@ -117,6 +121,7 @@ async function fetchOpenAPIFiles(config: OpenAPIConfig): Promise<string[]> {
   const files = (await response.json()) as Array<{
     name: string;
     type: string;
+    sha: string;
   }>;
   return files
     .filter(
@@ -125,7 +130,7 @@ async function fetchOpenAPIFiles(config: OpenAPIConfig): Promise<string[]> {
         f.name.endsWith(".json") &&
         f.name.startsWith(config.filePrefix)
     )
-    .map((f) => f.name);
+    .map((f) => ({ name: f.name, sha: f.sha }));
 }
 
 async function fetchSpec(
@@ -250,12 +255,18 @@ function buildEndpointText(
 }
 
 async function processSpec(
-  filename: string,
+  file: GitHubFile,
   config: OpenAPIConfig,
   cache: Cache,
   force: boolean
 ): Promise<ProcessResult> {
+  const { name: filename, sha } = file;
+
   try {
+    if (shouldUseCacheByRemoteHash(cache, filename, sha, force)) {
+      return { filename, chunks: [], cached: true, isNew: false };
+    }
+
     const result = await fetchSpec(filename, config);
     if (!result)
       return {
@@ -268,22 +279,10 @@ async function processSpec(
 
     const { spec, raw } = result;
     const contentHash = hashContent(raw);
-
-    if (
-      shouldUseCache(
-        cache,
-        filename,
-        contentHash,
-        DEFAULT_CACHE_TTL_DAYS,
-        force
-      )
-    ) {
-      return { filename, chunks: [], cached: true, isNew: false };
-    }
-
     const isNew = !cache[filename];
     const chunks = extractChunks(spec, filename, config);
-    updateCacheEntry(cache, filename, contentHash);
+
+    updateCacheEntry(cache, filename, contentHash, { remoteHash: sha });
 
     return { filename, chunks, cached: false, isNew };
   } catch (error) {
@@ -326,26 +325,55 @@ async function main(): Promise<void> {
   console.log(`\n📋 Found ${files.length} OpenAPI schemas`);
 
   if (filter) {
-    files = files.filter((f) => f.toLowerCase().includes(filter));
+    files = files.filter((f) => f.name.toLowerCase().includes(filter));
     console.log(`   After filter: ${files.length} schemas`);
   }
+
+  const unchangedFiles = files.filter((f) =>
+    shouldUseCacheByRemoteHash(cache, f.name, f.sha, force)
+  );
+  const changedFiles = files.filter(
+    (f) => !shouldUseCacheByRemoteHash(cache, f.name, f.sha, force)
+  );
+
+  console.log(`   📦 Unchanged (cached by SHA): ${unchangedFiles.length}`);
+  console.log(`   🔄 Changed/new (need processing): ${changedFiles.length}`);
 
   if (dryRun) {
     console.log("\n📝 Schemas that would be processed:\n");
     for (const file of files) {
-      console.log(`   - ${file} (${cache[file] ? "📦 cached" : "🆕 new"})`);
+      const isCached = shouldUseCacheByRemoteHash(
+        cache,
+        file.name,
+        file.sha,
+        force
+      );
+      console.log(
+        `   - ${file.name} (${isCached ? "📦 cached" : "🆕 new/changed"})`
+      );
     }
     console.log("\n✅ Dry run complete.\n");
     return;
   }
 
+  if (changedFiles.length === 0) {
+    console.log(`\n✅ All schemas unchanged, nothing to process.`);
+    try {
+      const stats = await getCollectionStats();
+      console.log(`   Total in Chroma: ${stats.count} docs\n`);
+    } catch {
+      // ignore
+    }
+    return;
+  }
+
   console.log(
-    `\n🚀 Processing ${files.length} schemas (${concurrency} concurrent)...\n`
+    `\n🚀 Processing ${changedFiles.length} changed schemas (${concurrency} concurrent)...\n`
   );
 
   const results = await processConcurrent(
-    files,
-    async (filename) => processSpec(filename, config, cache, force),
+    changedFiles,
+    async (file) => processSpec(file, config, cache, force),
     {
       concurrency,
       rateLimitMs: DEFAULT_RATE_LIMIT_MS,
@@ -364,13 +392,9 @@ async function main(): Promise<void> {
   const allChunks: ChunkDoc[] = [];
   let processed = 0;
   let skipped = 0;
-  let cached = 0;
 
   for (const result of results) {
-    if (result.cached) {
-      console.log(`   📦 ${result.filename} - cached`);
-      cached++;
-    } else if (result.error) {
+    if (result.error) {
       console.log(`   ❌ ${result.filename} - ${result.error}`);
       skipped++;
     } else if (result.chunks.length > 0) {
@@ -408,8 +432,8 @@ async function main(): Promise<void> {
     console.log("\n" + "─".repeat(50));
     console.log("✅ OpenAPI ingestion complete!");
     console.log(`   Schemas processed: ${processed}`);
-    console.log(`   Schemas cached: ${cached}`);
-    console.log(`   Schemas skipped: ${skipped}`);
+    console.log(`   Schemas unchanged (SHA cache): ${unchangedFiles.length}`);
+    console.log(`   Schemas skipped (errors): ${skipped}`);
     console.log(`   Chunks added: ${allChunks.length}`);
     console.log(`   Total in Chroma: ${stats.count} docs`);
     console.log("─".repeat(50) + "\n");

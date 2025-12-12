@@ -1,9 +1,11 @@
 import { ChromaClient } from "chromadb";
 import path from "path";
+import fs from "fs";
 import { deleteCache, CACHE_PATHS } from "../lib/cache";
 
 const CHROMA_HOST = process.env.CHROMA_HOST || "http://localhost:8000";
 const COLLECTION_NAME = "docs";
+const SITEMAP_TEMP_DIR = path.join(process.cwd(), "data", ".sitemap-temp");
 
 async function main() {
   console.log("🗑️  Chroma Reset\n");
@@ -27,7 +29,11 @@ async function main() {
     console.log("   ✅ Collection deleted\n");
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    if (message.includes("does not exist") || message.includes("not be found") || message.includes("not found")) {
+    if (
+      message.includes("does not exist") ||
+      message.includes("not be found") ||
+      message.includes("not found")
+    ) {
       console.log("   ℹ️  Collection didn't exist (already clean)\n");
     } else {
       throw error;
@@ -40,6 +46,11 @@ async function main() {
     if (deleteCache(fullPath)) {
       console.log(`   ✅ Deleted ${name} cache`);
     }
+  }
+
+  if (fs.existsSync(SITEMAP_TEMP_DIR)) {
+    fs.rmSync(SITEMAP_TEMP_DIR, { recursive: true, force: true });
+    console.log(`   ✅ Deleted sitemap temp directory`);
   }
   console.log("");
 

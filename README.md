@@ -58,7 +58,7 @@ pnpm docker:services
 pnpm docker:ollama:pull
 
 # 4. Ingest documentation (runs on host, connects to Docker services on localhost)
-pnpm chroma:fresh
+pnpm chroma:sync
 
 # 5. NOW build and start the app
 pnpm docker:app
@@ -67,28 +67,6 @@ pnpm docker:app
 > **⚠️ Important**: The order matters! You MUST ingest data BEFORE starting the app container. The app connects to Chroma via Docker's internal network (`http://chroma:8000`), which uses the same persistent volume as localhost ingestion.
 
 > **Note**: In Docker mode, use `docker:ollama:pull` instead of `ollama:pull` since Ollama runs inside Docker. The `chroma:fresh` command works from host because Docker exposes ChromaDB (port 8000) and Ollama (port 11434) to localhost.
-
-### Restarting Docker (After Data Changes)
-
-If you've already started all services and need to re-ingest data:
-
-```bash
-# One command to re-ingest and restart
-pnpm docker:reingest
-```
-
-Or manually:
-
-```bash
-# Stop only the app (keep Chroma + Ollama running)
-docker compose stop app
-
-# Re-ingest documentation
-pnpm chroma:fresh
-
-# Restart the app
-docker compose start app
-```
 
 ### Ports
 

@@ -7,9 +7,9 @@ import { getCollectionStats } from "../lib/chroma-rest";
 import {
   loadCache,
   saveCache,
-  isCacheExpired,
+  shouldUseCacheByLastmod,
+  updateCacheEntry,
   CACHE_PATHS,
-  DEFAULT_CACHE_TTL_DAYS,
   Cache,
 } from "../lib/cache";
 import { fetchUrl, processConcurrent } from "../lib/fetcher";
@@ -114,19 +114,24 @@ function filterUncached(
   urls: SitemapUrl[],
   cache: Cache,
   force: boolean
-): { toDownload: SitemapUrl[]; cached: number } {
-  if (force) return { toDownload: urls, cached: 0 };
+): { toDownload: SitemapUrl[]; cached: number; unchanged: number } {
+  if (force) return { toDownload: urls, cached: 0, unchanged: 0 };
   const toDownload: SitemapUrl[] = [];
   let cached = 0;
+  let unchanged = 0;
+
   for (const item of urls) {
-    const entry = cache[item.loc];
-    if (entry && !isCacheExpired(entry, DEFAULT_CACHE_TTL_DAYS)) {
-      cached++;
+    if (shouldUseCacheByLastmod(cache, item.loc, item.lastmod, force)) {
+      if (item.lastmod && cache[item.loc]?.lastmod === item.lastmod) {
+        unchanged++;
+      } else {
+        cached++;
+      }
     } else {
       toDownload.push(item);
     }
   }
-  return { toDownload, cached };
+  return { toDownload, cached, unchanged };
 }
 
 function loadConfig(): SitemapConfig[] {
@@ -150,7 +155,7 @@ function getBatchFiles(): string[] {
   if (!fs.existsSync(TEMP_DIR)) return [];
   return fs
     .readdirSync(TEMP_DIR)
-    .filter((f) => f.endsWith(".jsonl"))
+    .filter((f) => f.endsWith(".jsonl") && !f.endsWith(".done.jsonl"))
     .sort((a, b) => {
       const numA = parseInt(a.split("-")[1], 10);
       const numB = parseInt(b.split("-")[1], 10);
@@ -180,12 +185,19 @@ async function downloadBatch(
         const html = await fetchUrl(item.loc);
         const hash = hashContent(html);
         const text = extractContent(html, config.selector, true);
-        return { url: item.loc, hash, text, error: null };
+        return {
+          url: item.loc,
+          hash,
+          text,
+          lastmod: item.lastmod,
+          error: null,
+        };
       } catch (error) {
         return {
           url: item.loc,
           hash: null,
           text: null,
+          lastmod: item.lastmod,
           error: error instanceof Error ? error.message : String(error),
         };
       } finally {
@@ -211,6 +223,7 @@ async function downloadBatch(
           url: result.url,
           hash: result.hash,
           text: result.text,
+          lastmod: result.lastmod,
         })
       );
       downloaded++;
@@ -226,10 +239,22 @@ async function downloadBatch(
   return { file: lines.length > 0 ? batchFile : "", downloaded, errors };
 }
 
+interface CacheEntryFromChild {
+  url: string;
+  hash: string;
+  lastmod?: string;
+}
+
+interface BatchProcessResult {
+  processed: number;
+  chunksAdded: number;
+  cacheEntries: CacheEntryFromChild[];
+}
+
 function processBatchInChildProcess(
   batchFile: string,
   configName: string
-): Promise<{ processed: number; chunksAdded: number }> {
+): Promise<BatchProcessResult> {
   return new Promise((resolve) => {
     const child = spawn(
       "npx",
@@ -259,7 +284,7 @@ function processBatchInChildProcess(
         const result = JSON.parse(stdout.trim());
         resolve(result);
       } catch {
-        resolve({ processed: 0, chunksAdded: 0 });
+        resolve({ processed: 0, chunksAdded: 0, cacheEntries: [] });
       }
     });
   });
@@ -274,7 +299,6 @@ async function main(): Promise<void> {
   const filterArg = args.find((a) => a.startsWith("--filter="));
   const filter = filterArg?.split("=")[1]?.toLowerCase();
 
-  // Handle --clean flag: remove all temp files and exit
   if (clean) {
     console.log("🧹 Cleaning sitemap temp files...");
     cleanupTempDir();
@@ -352,14 +376,19 @@ async function main(): Promise<void> {
         );
         console.log(`   🔍 After filtering: ${filteredUrls.length} URLs`);
 
-        const { toDownload, cached: skippedCached } = filterUncached(
-          filteredUrls,
-          cache,
-          force
+        const {
+          toDownload,
+          cached: skippedCached,
+          unchanged: skippedUnchanged,
+        } = filterUncached(filteredUrls, cache, force);
+        console.log(
+          `   📦 Unchanged (lastmod match): ${skippedUnchanged} URLs (skipping)`
         );
-        console.log(`   📦 Already cached: ${skippedCached} URLs (skipping)`);
+        console.log(
+          `   📦 Cached (no lastmod): ${skippedCached} URLs (skipping)`
+        );
         console.log(`   🆕 To download: ${toDownload.length} URLs`);
-        totalCached += skippedCached;
+        totalCached += skippedCached + skippedUnchanged;
 
         if (dryRun) {
           console.log(`\n   📝 URLs that would be downloaded:`);
@@ -444,13 +473,22 @@ async function main(): Promise<void> {
           )
         );
 
-        for (const { processed, chunksAdded } of results) {
+        const allCacheEntries: CacheEntryFromChild[] = [];
+        for (const { processed, chunksAdded, cacheEntries } of results) {
           totalProcessed += processed;
           totalAdded += chunksAdded;
+          allCacheEntries.push(...cacheEntries);
         }
 
+        for (const entry of allCacheEntries) {
+          updateCacheEntry(cache, entry.url, entry.hash, {
+            lastmod: entry.lastmod,
+          });
+        }
+        saveCache(CACHE_PATH, cache);
+
         console.log(
-          `\n   ✅ Processed: ${totalProcessed}, Chunks added: ${totalAdded}`
+          `\n   ✅ Processed: ${totalProcessed}, Chunks added: ${totalAdded}, Cache entries: ${allCacheEntries.length}`
         );
       }
 
@@ -463,8 +501,6 @@ async function main(): Promise<void> {
       );
     }
   }
-
-  // Note: Temp files are kept as cache. Use --clean to remove them.
 
   if (dryRun) {
     console.log("\n✅ Dry run complete.\n");

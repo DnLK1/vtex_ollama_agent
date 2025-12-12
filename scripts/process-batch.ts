@@ -4,41 +4,49 @@
  * Spawned by ingest-sitemap.ts to ensure memory isolation.
  * Uses direct REST API to avoid chromadb-js V8 crashes.
  *
+ * Outputs JSON with processed count, chunks added, and cache entries
+ * for the parent to aggregate and save.
+ *
  * Usage: tsx scripts/process-batch.ts <batchFile> <configName>
  */
 
 import fs from "fs";
-import path from "path";
 import { upsertDocsBatch, DocToUpsert } from "../lib/chroma-rest";
-import {
-  updateCacheEntry,
-  loadCache,
-  saveCache,
-  CACHE_PATHS,
-} from "../lib/cache";
 import { createChunkDocs } from "../lib/chunking";
 
-const CACHE_PATH = path.join(process.cwd(), CACHE_PATHS.sitemap);
 const UPSERT_BATCH_SIZE = 20;
 
 interface ExtractedEntry {
   url: string;
   hash: string;
   text: string;
+  lastmod?: string;
+}
+
+interface CacheEntryOutput {
+  url: string;
+  hash: string;
+  lastmod?: string;
+}
+
+interface ProcessResult {
+  processed: number;
+  chunksAdded: number;
+  cacheEntries: CacheEntryOutput[];
+  error?: string;
 }
 
 async function processBatchFile(
   batchFile: string,
   configName: string
-): Promise<{ processed: number; chunksAdded: number }> {
-  const cache = loadCache(CACHE_PATH);
-
+): Promise<ProcessResult> {
   const content = fs.readFileSync(batchFile, "utf-8");
   const lines = content.trim().split("\n").filter(Boolean);
 
   let processed = 0;
   let chunksAdded = 0;
   let pendingDocs: DocToUpsert[] = [];
+  const cacheEntries: CacheEntryOutput[] = [];
 
   for (const line of lines) {
     try {
@@ -66,7 +74,11 @@ async function processBatchFile(
         }
       }
 
-      updateCacheEntry(cache, entry.url, entry.hash);
+      cacheEntries.push({
+        url: entry.url,
+        hash: entry.hash,
+        lastmod: entry.lastmod,
+      });
       processed++;
     } catch (err) {
       console.error(`Error: ${err instanceof Error ? err.message : err}`);
@@ -78,13 +90,10 @@ async function processBatchFile(
     chunksAdded += pendingDocs.length;
   }
 
-  saveCache(CACHE_PATH, cache);
-
-  // Rename batch file to .done.jsonl to mark as processed (keeps as cache)
   const donePath = batchFile.replace(/\.jsonl$/, ".done.jsonl");
   fs.renameSync(batchFile, donePath);
 
-  return { processed, chunksAdded };
+  return { processed, chunksAdded, cacheEntries };
 }
 
 async function main(): Promise<void> {
@@ -103,15 +112,15 @@ async function main(): Promise<void> {
   }
 
   try {
-    const { processed, chunksAdded } = await processBatchFile(
-      batchFile,
-      configName
-    );
-    console.log(JSON.stringify({ processed, chunksAdded }));
+    const result = await processBatchFile(batchFile, configName);
+    console.log(JSON.stringify(result));
     process.exit(0);
   } catch (error) {
-    console.error(
+    console.log(
       JSON.stringify({
+        processed: 0,
+        chunksAdded: 0,
+        cacheEntries: [],
         error: error instanceof Error ? error.message : String(error),
       })
     );

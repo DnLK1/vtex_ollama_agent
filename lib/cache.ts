@@ -4,6 +4,8 @@ import crypto from "crypto";
 export interface CacheEntry {
   hash: string;
   lastUpdated: string;
+  remoteHash?: string;
+  lastmod?: string;
 }
 
 export interface Cache {
@@ -56,12 +58,71 @@ export function shouldUseCache(
   return true;
 }
 
+/**
+ * Check if cache is valid based on remote hash (e.g., GitHub SHA).
+ * This allows skipping download entirely if the remote file hasn't changed.
+ * @param cache The cache object
+ * @param key The cache key (e.g., filename)
+ * @param remoteHash The remote file hash (e.g., GitHub SHA)
+ * @param force If true, always returns false (skip cache)
+ * @returns true if cache is valid and download can be skipped
+ */
+export function shouldUseCacheByRemoteHash(
+  cache: Cache,
+  key: string,
+  remoteHash: string,
+  force = false
+): boolean {
+  if (force) return false;
+
+  const entry = cache[key];
+  if (!entry) return false;
+  if (!entry.remoteHash) return false;
+
+  return entry.remoteHash === remoteHash;
+}
+
+/**
+ * Check if cache is valid based on lastmod date from source (e.g., sitemap).
+ * This allows skipping download if the source content hasn't been modified.
+ * @param cache The cache object
+ * @param key The cache key (e.g., URL)
+ * @param newLastmod The new lastmod date from source
+ * @param force If true, always returns false (skip cache)
+ * @returns true if cache is valid and download can be skipped
+ */
+export function shouldUseCacheByLastmod(
+  cache: Cache,
+  key: string,
+  newLastmod: string | undefined,
+  force = false
+): boolean {
+  if (force) return false;
+
+  const entry = cache[key];
+  if (!entry) return false;
+
+  if (!newLastmod) return !!entry;
+  if (!entry.lastmod) return false;
+
+  const cachedDate = new Date(entry.lastmod).getTime();
+  const newDate = new Date(newLastmod).getTime();
+
+  return newDate <= cachedDate;
+}
+
 export function updateCacheEntry(
   cache: Cache,
   key: string,
-  contentHash: string
+  contentHash: string,
+  options?: { remoteHash?: string; lastmod?: string }
 ): void {
-  cache[key] = { hash: contentHash, lastUpdated: new Date().toISOString() };
+  cache[key] = {
+    hash: contentHash,
+    lastUpdated: new Date().toISOString(),
+    ...(options?.remoteHash && { remoteHash: options.remoteHash }),
+    ...(options?.lastmod && { lastmod: options.lastmod }),
+  };
 }
 
 export function deleteCache(cachePath: string): boolean {
