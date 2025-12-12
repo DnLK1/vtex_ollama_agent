@@ -36,17 +36,20 @@ pnpm install
 # 2. Build the project container
 pnpm docker:build
 
-# 3. Start all services
+# 3. Start all services (ollama, chroma, app)
 pnpm docker:up
 
-# 4. Pull models in container
-pnpm ollama:pull
+# 4. Pull models INSIDE the Ollama container
+pnpm docker:ollama:pull
 
-# 5. Ingest documentation
+# 5. Ingest documentation (runs on host, connects to Docker services)
 pnpm chroma:fresh
 
-# 6. Access at http://localhost:3000
+# 6. Restart the app to pick up the ingested data
+docker compose restart app
 ```
+
+> **Note**: In Docker mode, use `docker:ollama:pull` instead of `ollama:pull` since Ollama runs inside Docker. The `chroma:fresh` command works from host because Docker exposes ChromaDB (port 8000) and Ollama (port 11434) to localhost.
 
 ## Architecture
 

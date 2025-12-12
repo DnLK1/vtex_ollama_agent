@@ -21,7 +21,8 @@
     "chroma:sync": "pnpm ingest:manual && pnpm ingest:urls && pnpm ingest:openapi && pnpm ingest:sitemap",
     "chroma:fresh": "tsx scripts/countdown.ts && pnpm chroma:reset && pnpm chroma:sync",
     "ollama:start": "ollama serve",
-    "ollama:pull": "ollama pull llama3.1:8b && ollama pull mxbai-embed-large"
+    "ollama:pull": "ollama pull llama3.1:8b && ollama pull mxbai-embed-large",
+    "docker:ollama:pull": "docker compose exec ollama ollama pull llama3.1:8b && docker compose exec ollama ollama pull mxbai-embed-large"
   },
   "dependencies": {
     "cheerio": "^1.0.0",
