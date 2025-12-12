@@ -270,8 +270,17 @@ async function main(): Promise<void> {
   const force = args.includes("--force");
   const dryRun = args.includes("--dry-run");
   const processOnly = args.includes("--process-only");
+  const clean = args.includes("--clean");
   const filterArg = args.find((a) => a.startsWith("--filter="));
   const filter = filterArg?.split("=")[1]?.toLowerCase();
+
+  // Handle --clean flag: remove all temp files and exit
+  if (clean) {
+    console.log("🧹 Cleaning sitemap temp files...");
+    cleanupTempDir();
+    console.log("✅ Temp directory cleaned.\n");
+    return;
+  }
 
   console.log("🗺️  Sitemap Ingestion\n");
   console.log("─".repeat(50));
@@ -286,6 +295,7 @@ async function main(): Promise<void> {
   if (dryRun) console.log(`   Mode: DRY RUN`);
   if (force) console.log(`   Mode: FORCE (ignoring cache)`);
   if (processOnly) console.log(`   Mode: PROCESS ONLY (skip download)`);
+  console.log(`   Tip: Use --clean to remove cached temp files`);
   console.log("─".repeat(50));
 
   const cache = loadCache(CACHE_PATH);
@@ -454,7 +464,7 @@ async function main(): Promise<void> {
     }
   }
 
-  cleanupTempDir();
+  // Note: Temp files are kept as cache. Use --clean to remove them.
 
   if (dryRun) {
     console.log("\n✅ Dry run complete.\n");

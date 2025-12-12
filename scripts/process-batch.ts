@@ -79,7 +79,10 @@ async function processBatchFile(
   }
 
   saveCache(CACHE_PATH, cache);
-  fs.unlinkSync(batchFile);
+
+  // Rename batch file to .done.jsonl to mark as processed (keeps as cache)
+  const donePath = batchFile.replace(/\.jsonl$/, ".done.jsonl");
+  fs.renameSync(batchFile, donePath);
 
   return { processed, chunksAdded };
 }
