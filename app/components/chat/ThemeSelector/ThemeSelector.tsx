@@ -100,7 +100,7 @@ export function ThemeSelector({
                           onMatrixRainChange(!matrixRain);
                         }
                       }}
-                      className="w-3 h-3 accent-[var(--green)]"
+                      className="w-3 h-3 appearance-none rounded-sm border border-[var(--fg-muted)] bg-[var(--bg-highlight)] checked:bg-[var(--green)] checked:border-[var(--green)] relative checked:after:content-['✓'] checked:after:absolute checked:after:inset-0 checked:after:flex checked:after:items-center checked:after:justify-center checked:after:text-[8px] checked:after:text-black checked:after:font-bold"
                     />
                   </label>
                 )}
