@@ -12,6 +12,8 @@ export type Theme =
   | "nord"
   | "tokyo"
   | "catppuccin"
+  | "solarized"
+  | "github"
   | "matrix"
   | "christmas"
   | "space"

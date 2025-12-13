@@ -85,6 +85,40 @@
   --orange: #fab387;
 }
 
+/* Solarized Light theme */
+[data-theme="solarized"] {
+  --bg-hard: #eee8d5;
+  --bg: #fdf6e3;
+  --bg-soft: #eee8d5;
+  --bg-highlight: #e0dbcb;
+  --fg: #657b83;
+  --fg-dim: #839496;
+  --fg-muted: #93a1a1;
+  --accent: #268bd2;
+  --green: #859900;
+  --yellow: #b58900;
+  --blue: #268bd2;
+  --red: #dc322f;
+  --orange: #cb4b16;
+}
+
+/* GitHub Light theme */
+[data-theme="github"] {
+  --bg-hard: #f6f8fa;
+  --bg: #ffffff;
+  --bg-soft: #f6f8fa;
+  --bg-highlight: #e1e4e8;
+  --fg: #24292e;
+  --fg-dim: #586069;
+  --fg-muted: #959da5;
+  --accent: #0366d6;
+  --green: #22863a;
+  --yellow: #b08800;
+  --blue: #0366d6;
+  --red: #d73a49;
+  --orange: #e36209;
+}
+
 /* Matrix theme */
 [data-theme="matrix"] {
   --bg-hard: #000000;

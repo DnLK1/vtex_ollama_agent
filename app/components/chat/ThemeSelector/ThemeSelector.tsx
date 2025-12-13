@@ -42,6 +42,18 @@ const themes: ThemeConfig[] = [
     description: "Soothing pastel theme",
   },
   {
+    id: "solarized",
+    name: "Solarized",
+    color: "#268bd2",
+    description: "Classic light theme ☀️",
+  },
+  {
+    id: "github",
+    name: "GitHub",
+    color: "#24292e",
+    description: "Clean and familiar light theme 📄",
+  },
+  {
     id: "matrix",
     name: "Matrix",
     color: "#00ff41",
