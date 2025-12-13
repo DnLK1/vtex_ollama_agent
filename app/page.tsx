@@ -10,6 +10,9 @@ import {
   ThemeSelector,
   MatrixRain,
   SnowEffect,
+  SpaceEffect,
+  NightSkyEffect,
+  SynthwaveEffect,
   Theme,
 } from "./components/chat";
 import { useChat } from "@/hooks/useChat";
@@ -20,18 +23,27 @@ export default function Home() {
   const [theme, setTheme] = useState<Theme>("grey");
   const [matrixRain, setMatrixRain] = useState(false);
   const [christmasSnow, setChristmasSnow] = useState(false);
+  const [spaceStars, setSpaceStars] = useState(false);
+  const [nightSkyRotation, setNightSkyRotation] = useState(false);
+  const [synthwaveGrid, setSynthwaveGrid] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("theme") as Theme | null;
     const savedRain = localStorage.getItem("matrixRain") === "true";
     const savedSnow = localStorage.getItem("christmasSnow") === "true";
+    const savedStars = localStorage.getItem("spaceStars") === "true";
+    const savedNightSky = localStorage.getItem("nightSkyRotation") === "true";
+    const savedSynthwave = localStorage.getItem("synthwaveGrid") === "true";
     if (savedTheme) {
       setTheme(savedTheme);
       document.documentElement.setAttribute("data-theme", savedTheme);
     }
     setMatrixRain(savedRain);
     setChristmasSnow(savedSnow);
+    setSpaceStars(savedStars);
+    setNightSkyRotation(savedNightSky);
+    setSynthwaveGrid(savedSynthwave);
   }, []);
 
   const handleThemeChange = (newTheme: Theme) => {
@@ -52,6 +64,21 @@ export default function Home() {
   const handleChristmasSnowChange = (enabled: boolean) => {
     setChristmasSnow(enabled);
     localStorage.setItem("christmasSnow", String(enabled));
+  };
+
+  const handleSpaceStarsChange = (enabled: boolean) => {
+    setSpaceStars(enabled);
+    localStorage.setItem("spaceStars", String(enabled));
+  };
+
+  const handleNightSkyRotationChange = (enabled: boolean) => {
+    setNightSkyRotation(enabled);
+    localStorage.setItem("nightSkyRotation", String(enabled));
+  };
+
+  const handleSynthwaveGridChange = (enabled: boolean) => {
+    setSynthwaveGrid(enabled);
+    localStorage.setItem("synthwaveGrid", String(enabled));
   };
 
   useEffect(() => {
@@ -75,6 +102,12 @@ export default function Home() {
           onMatrixRainChange={handleMatrixRainChange}
           christmasSnow={christmasSnow}
           onChristmasSnowChange={handleChristmasSnowChange}
+          spaceStars={spaceStars}
+          onSpaceStarsChange={handleSpaceStarsChange}
+          nightSkyRotation={nightSkyRotation}
+          onNightSkyRotationChange={handleNightSkyRotationChange}
+          synthwaveGrid={synthwaveGrid}
+          onSynthwaveGridChange={handleSynthwaveGridChange}
         />
       </Header>
 
@@ -83,6 +116,9 @@ export default function Home() {
           <div className="absolute top-0 left-0 w-full h-[calc(100vh-8rem)]">
             {theme === "matrix" && <MatrixRain enabled={matrixRain} />}
             {theme === "christmas" && <SnowEffect enabled={christmasSnow} />}
+            {theme === "space" && <SpaceEffect enabled={spaceStars} />}
+            {theme === "nightsky" && <NightSkyEffect enabled={nightSkyRotation} />}
+            {theme === "synthwave" && <SynthwaveEffect enabled={synthwaveGrid} />}
           </div>
         </div>
         <div className="max-w-4xl mx-auto px-4 py-4 relative z-10">

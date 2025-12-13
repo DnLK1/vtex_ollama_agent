@@ -30,8 +30,9 @@ export interface FetchResult<T> {
   meta?: T;
 }
 
-const DEFAULT_USER_AGENT = "Mozilla/5.0 (compatible; DocsBot/1.0)";
-const DEFAULT_ACCEPT = "text/html,application/xhtml+xml";
+const DEFAULT_USER_AGENT =
+  "Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/115.0";
+const DEFAULT_ACCEPT = "text/html,application/xhtml+xml,application/xml;q=0.9";
 const DEFAULT_CONCURRENCY = 5;
 const DEFAULT_RATE_LIMIT_MS = 300;
 const DEFAULT_RETRIES = 2;
@@ -52,12 +53,20 @@ export async function fetchUrl(
     retryDelay = DEFAULT_RETRY_DELAY,
   } = options;
 
+  const cacheBustUrl = new URL(url);
+  cacheBustUrl.searchParams.set("_t", Date.now().toString());
+
   let lastError: Error | null = null;
 
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
-      const response = await fetch(url, {
-        headers: { "User-Agent": userAgent, Accept: accept },
+      const response = await fetch(cacheBustUrl.toString(), {
+        headers: {
+          "User-Agent": userAgent,
+          Accept: accept,
+          "Cache-Control": "no-cache, no-store",
+          Pragma: "no-cache",
+        },
       });
 
       if (!response.ok) {

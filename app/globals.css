@@ -119,6 +119,57 @@
   --orange: #ff6b35;
 }
 
+/* Space theme */
+[data-theme="space"] {
+  --bg-hard: #030712;
+  --bg: #0f172a;
+  --bg-soft: #1e293b;
+  --bg-highlight: #334155;
+  --fg: #e2e8f0;
+  --fg-dim: #94a3b8;
+  --fg-muted: #475569;
+  --accent: #818cf8;
+  --green: #4ade80;
+  --yellow: #fbbf24;
+  --blue: #38bdf8;
+  --red: #f87171;
+  --orange: #fb923c;
+}
+
+/* Night Sky theme */
+[data-theme="nightsky"] {
+  --bg-hard: #0a0a1a;
+  --bg: #0d1025;
+  --bg-soft: #151830;
+  --bg-highlight: #1e2240;
+  --fg: #d4d8f0;
+  --fg-dim: #9ca3c4;
+  --fg-muted: #4a5280;
+  --accent: #a5b4fc;
+  --green: #86efac;
+  --yellow: #fde68a;
+  --blue: #93c5fd;
+  --red: #fca5a5;
+  --orange: #fdba74;
+}
+
+/* Synthwave theme */
+[data-theme="synthwave"] {
+  --bg-hard: #0a0010;
+  --bg: #1a0a2e;
+  --bg-soft: #2d1b4e;
+  --bg-highlight: #3d2a5e;
+  --fg: #f0e6ff;
+  --fg-dim: #c4b5d9;
+  --fg-muted: #6b5a80;
+  --accent: #ff00c8;
+  --green: #00ffaa;
+  --yellow: #ffdd00;
+  --blue: #00ffff;
+  --red: #ff0066;
+  --orange: #ff6600;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -147,13 +198,22 @@ body {
 }
 
 @keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .animate-fade-in {
@@ -169,7 +229,8 @@ body {
   color: var(--bg);
 }
 
-pre, code {
+pre,
+code {
   font-family: inherit;
 }
 
@@ -214,7 +275,8 @@ pre, code {
   font-size: 0.85em;
 }
 
-.prose-chat ul, .prose-chat ol {
+.prose-chat ul,
+.prose-chat ol {
   margin: 0.5em 0;
   padding-left: 1.5em;
 }
@@ -246,7 +308,9 @@ pre, code {
   color: var(--fg);
 }
 
-.prose-chat h1, .prose-chat h2, .prose-chat h3 {
+.prose-chat h1,
+.prose-chat h2,
+.prose-chat h3 {
   color: var(--green);
   margin: 1em 0 0.5em 0;
   font-weight: 600;
@@ -258,9 +322,15 @@ pre, code {
   margin-top: 0;
 }
 
-.prose-chat h1 { font-size: 1.3em; }
-.prose-chat h2 { font-size: 1.15em; }
-.prose-chat h3 { font-size: 1.05em; }
+.prose-chat h1 {
+  font-size: 1.3em;
+}
+.prose-chat h2 {
+  font-size: 1.15em;
+}
+.prose-chat h3 {
+  font-size: 1.05em;
+}
 
 .prose-chat blockquote {
   border-left: 3px solid var(--fg-muted);
@@ -282,7 +352,8 @@ pre, code {
   font-size: 0.9em;
 }
 
-.prose-chat th, .prose-chat td {
+.prose-chat th,
+.prose-chat td {
   border: 1px solid var(--bg-highlight);
   padding: 0.5em 0.75em;
   text-align: left;

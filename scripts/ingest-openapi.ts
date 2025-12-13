@@ -361,9 +361,7 @@ async function main(): Promise<void> {
     try {
       const stats = await getCollectionStats();
       console.log(`   Total in Chroma: ${stats.count} docs\n`);
-    } catch {
-      // ignore
-    }
+    } catch {}
     return;
   }
 

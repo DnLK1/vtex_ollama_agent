@@ -8,12 +8,13 @@ import {
   loadCache,
   saveCache,
   shouldUseCacheByLastmod,
+  isCacheExpired,
   updateCacheEntry,
   CACHE_PATHS,
   Cache,
 } from "../lib/cache";
 import { fetchUrl, processConcurrent } from "../lib/fetcher";
-import { extractContent } from "../lib/content";
+import { extractContent, ExtractOptions } from "../lib/content";
 import { hashContent } from "../lib/cache";
 
 const CONFIG_PATH = path.join(process.cwd(), "data", "sitemap-config.json");
@@ -31,6 +32,8 @@ interface SitemapConfig {
   selector?: string | string[];
   concurrency?: number;
   rateLimitMs?: number;
+  ignoreLastmod?: boolean;
+  cacheTtlDays?: number;
 }
 
 interface SitemapUrl {
@@ -113,16 +116,35 @@ function filterUrls(
 function filterUncached(
   urls: SitemapUrl[],
   cache: Cache,
-  force: boolean
-): { toDownload: SitemapUrl[]; cached: number; unchanged: number } {
-  if (force) return { toDownload: urls, cached: 0, unchanged: 0 };
+  force: boolean,
+  ignoreLastmod = false,
+  cacheTtlDays?: number
+): { toDownload: SitemapUrl[]; cached: number; unchanged: number; expired: number } {
+  if (force) return { toDownload: urls, cached: 0, unchanged: 0, expired: 0 };
   const toDownload: SitemapUrl[] = [];
   let cached = 0;
   let unchanged = 0;
+  let expired = 0;
 
   for (const item of urls) {
+    const entry = cache[item.loc];
+
+    if (ignoreLastmod) {
+      if (entry) {
+        if (cacheTtlDays && isCacheExpired(entry, cacheTtlDays)) {
+          expired++;
+          toDownload.push(item);
+        } else {
+          cached++;
+        }
+        continue;
+      }
+      toDownload.push(item);
+      continue;
+    }
+
     if (shouldUseCacheByLastmod(cache, item.loc, item.lastmod, force)) {
-      if (item.lastmod && cache[item.loc]?.lastmod === item.lastmod) {
+      if (item.lastmod && entry?.lastmod === item.lastmod) {
         unchanged++;
       } else {
         cached++;
@@ -131,7 +153,7 @@ function filterUncached(
       toDownload.push(item);
     }
   }
-  return { toDownload, cached, unchanged };
+  return { toDownload, cached, unchanged, expired };
 }
 
 function loadConfig(): SitemapConfig[] {
@@ -178,13 +200,18 @@ async function downloadBatch(
     `batch-${String(batchNum).padStart(4, "0")}.jsonl`
   );
 
+  const extractOptions: ExtractOptions = {
+    selector: config.selector,
+    silent: true,
+  };
+
   const results = await processConcurrent(
     urls,
     async (item, index) => {
       try {
-        const html = await fetchUrl(item.loc);
-        const hash = hashContent(html);
-        const text = extractContent(html, config.selector, true);
+        const rawContent = await fetchUrl(item.loc);
+        const hash = hashContent(rawContent);
+        const text = extractContent(rawContent, extractOptions);
         return {
           url: item.loc,
           hash,
@@ -380,13 +407,32 @@ async function main(): Promise<void> {
           toDownload,
           cached: skippedCached,
           unchanged: skippedUnchanged,
-        } = filterUncached(filteredUrls, cache, force);
-        console.log(
-          `   📦 Unchanged (lastmod match): ${skippedUnchanged} URLs (skipping)`
+          expired: skippedExpired,
+        } = filterUncached(
+          filteredUrls,
+          cache,
+          force,
+          config.ignoreLastmod,
+          config.cacheTtlDays
         );
-        console.log(
-          `   📦 Cached (no lastmod): ${skippedCached} URLs (skipping)`
-        );
+
+        if (config.ignoreLastmod) {
+          console.log(
+            `   📦 Cached (TTL ${config.cacheTtlDays ?? "∞"} days): ${skippedCached} URLs (skipping)`
+          );
+          if (skippedExpired > 0) {
+            console.log(
+              `   ⏰ Expired (TTL): ${skippedExpired} URLs (re-downloading)`
+            );
+          }
+        } else {
+          console.log(
+            `   📦 Unchanged (lastmod match): ${skippedUnchanged} URLs (skipping)`
+          );
+          console.log(
+            `   📦 Cached (no lastmod): ${skippedCached} URLs (skipping)`
+          );
+        }
         console.log(`   🆕 To download: ${toDownload.length} URLs`);
         totalCached += skippedCached + skippedUnchanged;
 

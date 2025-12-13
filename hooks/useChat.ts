@@ -34,7 +34,6 @@ export function useChat() {
       setMessages((prev) => [...prev, userMessage]);
       setIsLoading(true);
 
-      // Create empty assistant message for streaming
       setMessages((prev) => [
         ...prev,
         {
@@ -99,9 +98,7 @@ export function useChat() {
                   )
                 );
               }
-            } catch {
-              // Skip malformed JSON
-            }
+            } catch {}
           }
         }
       } catch (error) {

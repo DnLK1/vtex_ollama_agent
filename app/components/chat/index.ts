@@ -3,7 +3,6 @@
  * @module chat
  */
 
-// Components
 export { Header } from "./Header";
 export { TypingIndicator } from "./TypingIndicator";
 export { MessageBubble } from "./MessageBubble";
@@ -12,8 +11,10 @@ export { ChatInput } from "./ChatInput";
 export { ThemeSelector } from "./ThemeSelector";
 export { MatrixRain } from "./MatrixRain";
 export { SnowEffect } from "./SnowEffect";
+export { SpaceEffect } from "./SpaceEffect";
+export { NightSkyEffect } from "./NightSkyEffect";
+export { SynthwaveEffect } from "./SynthwaveEffect";
 
-// Types
 export type { Message, Source } from "./types";
 export type { HeaderProps } from "./Header";
 export type { MessageBubbleProps } from "./MessageBubble";

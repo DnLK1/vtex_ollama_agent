@@ -22,19 +22,13 @@ export async function GET() {
     timestamp: new Date().toISOString(),
   };
 
-  // Check Ollama
   try {
     const res = await fetch(`${OLLAMA_HOST}/api/tags`, {
       signal: AbortSignal.timeout(5000),
     });
-    if (res.ok) {
-      health.services.ollama = { status: "up" };
-    } else {
-      health.services.ollama = {
-        status: "down",
-        message: `HTTP ${res.status}`,
-      };
-    }
+    health.services.ollama = res.ok
+      ? { status: "up" }
+      : { status: "down", message: `HTTP ${res.status}` };
   } catch (error) {
     health.services.ollama = {
       status: "down",
@@ -42,13 +36,9 @@ export async function GET() {
     };
   }
 
-  // Check Chroma
   try {
     const stats = await getCollectionStats();
-    health.services.chroma = {
-      status: "up",
-      docCount: stats.count,
-    };
+    health.services.chroma = { status: "up", docCount: stats.count };
   } catch (error) {
     health.services.chroma = {
       status: "down",
@@ -56,16 +46,15 @@ export async function GET() {
     };
   }
 
-  // Determine overall status
   const ollamaUp = health.services.ollama.status === "up";
   const chromaUp = health.services.chroma.status === "up";
 
-  if (ollamaUp && chromaUp) {
-    health.status = "healthy";
-  } else if (ollamaUp || chromaUp) {
-    health.status = "degraded";
-  } else {
+  if (!ollamaUp && !chromaUp) {
     health.status = "unhealthy";
+  } else if (ollamaUp && chromaUp) {
+    health.status = "healthy";
+  } else {
+    health.status = "degraded";
   }
 
   const httpStatus = health.status === "unhealthy" ? 503 : 200;

@@ -106,8 +106,8 @@ DOCUMENTATION END
 RULES:
 1. FIRST: Check if any document above contains a special response rule. If yes, follow it exactly without explanation.
 2. The answer is IN the documentation above. Find and quote it directly.
-3. If asking about an endpoint, look for "**Endpoint:**" in the documentation and copy it exactly.
-4. Do NOT make up endpoints or URLs. Only use what appears in the documentation.
+3. If asking about an endpoint, look for "**Endpoint:**" in the documentation and copy it exactly. Do NOT make up endpoints or URLs. Only use what appears in the documentation.
+4. If the documentation says it is a VTEX Known Issue, look for a lookaroung in the documentation. If there is no lookaroung, say "VTEX recognizes this as a known issue and is working on a solution."
 5. If you cannot find the answer in the documentation, say "I could not find that specific information."
 6. Be concise. Quote the relevant parts directly.
 7. Each 10th message, use "My dear padawan," at the answer.`;
@@ -225,7 +225,6 @@ export async function POST(req: Request) {
           }
         }
 
-        // Send sources as final event
         controller.enqueue(
           encoder.encode(
             `data: ${JSON.stringify({ type: "done", sources })}\n\n`

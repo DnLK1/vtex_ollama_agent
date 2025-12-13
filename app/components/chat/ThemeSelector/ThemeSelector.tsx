@@ -11,6 +11,9 @@ const themes: ThemeOption[] = [
   { id: "catppuccin", name: "Catppuccin", color: "#f5c2e7" },
   { id: "matrix", name: "Matrix", color: "#00ff41" },
   { id: "christmas", name: "Christmas", color: "#c41e3a" },
+  { id: "space", name: "Space", color: "#818cf8" },
+  { id: "nightsky", name: "Night Sky", color: "#a5b4fc" },
+  { id: "synthwave", name: "Synthwave", color: "#ff00c8" },
 ];
 
 /**
@@ -29,6 +32,12 @@ export function ThemeSelector({
   onMatrixRainChange,
   christmasSnow,
   onChristmasSnowChange,
+  spaceStars,
+  onSpaceStarsChange,
+  nightSkyRotation,
+  onNightSkyRotationChange,
+  synthwaveGrid,
+  onSynthwaveGridChange,
 }: ThemeSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -53,7 +62,7 @@ export function ThemeSelector({
             className="fixed inset-0 z-10"
             onClick={() => setIsOpen(false)}
           />
-          <div className="absolute right-0 top-full mt-1 z-20 bg-[var(--bg-soft)] border border-[var(--bg-highlight)] py-1 min-w-[160px] animate-fade-in">
+          <div className="absolute right-0 top-full mt-1 z-20 bg-[var(--bg-soft)] border border-[var(--bg-highlight)] py-1 min-w-[230px] animate-fade-in">
             <div className="px-2 py-1 text-xs text-[var(--fg-muted)] border-b border-[var(--bg-highlight)]">
               theme
             </div>
@@ -75,9 +84,16 @@ export function ThemeSelector({
                     style={{ backgroundColor: theme.color }}
                   />
                   <span>{theme.name}</span>
-                  {currentTheme === theme.id && !["matrix", "christmas"].includes(theme.id) && (
-                    <span className="ml-auto text-[var(--green)]">✓</span>
-                  )}
+                  {currentTheme === theme.id &&
+                    ![
+                      "matrix",
+                      "christmas",
+                      "space",
+                      "nightsky",
+                      "synthwave",
+                    ].includes(theme.id) && (
+                      <span className="ml-auto text-[var(--green)]">✓</span>
+                    )}
                 </button>
                 {theme.id === "matrix" && (
                   <label
@@ -103,7 +119,7 @@ export function ThemeSelector({
                           onMatrixRainChange(!matrixRain);
                         }
                       }}
-                      className="w-3 h-3 appearance-none rounded-sm border border-[var(--fg-muted)] bg-[var(--bg-highlight)] checked:bg-[var(--green)] checked:border-[var(--green)] relative checked:after:content-['✓'] checked:after:absolute checked:after:inset-0 checked:after:flex checked:after:items-center checked:after:justify-center checked:after:text-[8px] checked:after:text-black checked:after:font-bold"
+                      className="w-3 h-3 appearance-none rounded-sm border border-[var(--fg-muted)] bg-[var(--bg-highlight)] checked:bg-[var(--green)] checked:border-[var(--green)] disabled:checked:bg-[var(--fg-muted)] disabled:checked:border-[var(--fg-muted)] relative checked:after:content-['✓'] checked:after:absolute checked:after:inset-0 checked:after:flex checked:after:items-center checked:after:justify-center checked:after:text-[8px] checked:after:text-black checked:after:font-bold"
                     />
                   </label>
                 )}
@@ -131,7 +147,95 @@ export function ThemeSelector({
                           onChristmasSnowChange(!christmasSnow);
                         }
                       }}
-                      className="w-3 h-3 appearance-none rounded-sm border border-[var(--fg-muted)] bg-[var(--bg-highlight)] checked:bg-[var(--red)] checked:border-[var(--red)] relative checked:after:content-['✓'] checked:after:absolute checked:after:inset-0 checked:after:flex checked:after:items-center checked:after:justify-center checked:after:text-[8px] checked:after:text-white checked:after:font-bold"
+                      className="w-3 h-3 appearance-none rounded-sm border border-[var(--fg-muted)] bg-[var(--bg-highlight)] checked:bg-[var(--red)] checked:border-[var(--red)] disabled:checked:bg-[var(--fg-muted)] disabled:checked:border-[var(--fg-muted)] relative checked:after:content-['✓'] checked:after:absolute checked:after:inset-0 checked:after:flex checked:after:items-center checked:after:justify-center checked:after:text-[8px] checked:after:text-white checked:after:font-bold"
+                    />
+                  </label>
+                )}
+                {theme.id === "space" && (
+                  <label
+                    className={`ml-auto flex items-center gap-1 text-xs ${
+                      currentTheme !== "space"
+                        ? "opacity-30 cursor-not-allowed"
+                        : "cursor-pointer"
+                    }`}
+                    title={
+                      currentTheme === "space"
+                        ? "Toggle warp stars effect"
+                        : "Select Space theme first"
+                    }
+                  >
+                    <span className="text-[var(--fg-dim)] text-xs">+warp?</span>
+                    <input
+                      type="checkbox"
+                      checked={spaceStars}
+                      disabled={currentTheme !== "space"}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        if (currentTheme === "space") {
+                          onSpaceStarsChange(!spaceStars);
+                        }
+                      }}
+                      className="w-3 h-3 appearance-none rounded-sm border border-[var(--fg-muted)] bg-[var(--bg-highlight)] checked:bg-[var(--accent)] checked:border-[var(--accent)] disabled:checked:bg-[var(--fg-muted)] disabled:checked:border-[var(--fg-muted)] relative checked:after:content-['✓'] checked:after:absolute checked:after:inset-0 checked:after:flex checked:after:items-center checked:after:justify-center checked:after:text-[8px] checked:after:text-white checked:after:font-bold"
+                    />
+                  </label>
+                )}
+                {theme.id === "nightsky" && (
+                  <label
+                    className={`ml-auto flex items-center gap-1 text-xs ${
+                      currentTheme !== "nightsky"
+                        ? "opacity-30 cursor-not-allowed"
+                        : "cursor-pointer"
+                    }`}
+                    title={
+                      currentTheme === "nightsky"
+                        ? "Toggle star rotation effect"
+                        : "Select Night Sky theme first"
+                    }
+                  >
+                    <span className="text-[var(--fg-dim)] text-xs">
+                      +peace?
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={nightSkyRotation}
+                      disabled={currentTheme !== "nightsky"}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        if (currentTheme === "nightsky") {
+                          onNightSkyRotationChange(!nightSkyRotation);
+                        }
+                      }}
+                      className="w-3 h-3 appearance-none rounded-sm border border-[var(--fg-muted)] bg-[var(--bg-highlight)] checked:bg-[var(--accent)] checked:border-[var(--accent)] disabled:checked:bg-[var(--fg-muted)] disabled:checked:border-[var(--fg-muted)] relative checked:after:content-['✓'] checked:after:absolute checked:after:inset-0 checked:after:flex checked:after:items-center checked:after:justify-center checked:after:text-[8px] checked:after:text-white checked:after:font-bold"
+                    />
+                  </label>
+                )}
+                {theme.id === "synthwave" && (
+                  <label
+                    className={`ml-auto flex items-center gap-1 text-xs ${
+                      currentTheme !== "synthwave"
+                        ? "opacity-30 cursor-not-allowed"
+                        : "cursor-pointer"
+                    }`}
+                    title={
+                      currentTheme === "synthwave"
+                        ? "Toggle grid effect"
+                        : "Select Synthwave theme first"
+                    }
+                  >
+                    <span className="text-[var(--fg-dim)] text-xs">
+                      +vibes?
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={synthwaveGrid}
+                      disabled={currentTheme !== "synthwave"}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        if (currentTheme === "synthwave") {
+                          onSynthwaveGridChange(!synthwaveGrid);
+                        }
+                      }}
+                      className="w-3 h-3 appearance-none rounded-sm border border-[var(--fg-muted)] bg-[var(--bg-highlight)] checked:bg-[var(--accent)] checked:border-[var(--accent)] disabled:checked:bg-[var(--fg-muted)] disabled:checked:border-[var(--fg-muted)] relative checked:after:content-['✓'] checked:after:absolute checked:after:inset-0 checked:after:flex checked:after:items-center checked:after:justify-center checked:after:text-[8px] checked:after:text-white checked:after:font-bold"
                     />
                   </label>
                 )}

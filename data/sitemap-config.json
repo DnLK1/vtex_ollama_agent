@@ -10,5 +10,14 @@
       "/docs/guides/do-not-remove"
     ],
     "selector": [".css-iourwr", ".css-89s28c", ".css-k3pwzx"]
+  },
+  {
+    "url": "https://help.vtex.com/server-sitemap.xml",
+    "name": "VTEX Help Center",
+    "include": ["/en/docs/**", "/en/known-issues/**", "/en/faq/**"],
+    "exclude": ["/es/**", "/pt/**", "/en/announcements/**"],
+    "selector": "article",
+    "ignoreLastmod": true,
+    "cacheTtlDays": 7
   }
 ]

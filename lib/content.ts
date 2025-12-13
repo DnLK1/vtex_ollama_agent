@@ -1,5 +1,10 @@
 import * as cheerio from "cheerio";
 
+export interface ExtractOptions {
+  selector?: string | string[];
+  silent?: boolean;
+}
+
 export const REMOVE_SELECTORS = [
   "script",
   "style",
@@ -66,7 +71,11 @@ export function extractContentAuto(html: string): string {
   return cleanText($("body").text());
 }
 
-export function extractContent(
+/**
+ * Extracts content from HTML using CSS selectors.
+ * Falls back to auto-detection if selectors don't match.
+ */
+export function extractHtmlContent(
   html: string,
   selector?: string | string[],
   silent = false
@@ -81,10 +90,32 @@ export function extractContent(
   }
 
   if (!silent) {
-    console.log(`      ⚠️ Selectors [${selectors.join(", ")}] returned empty, using auto-detect`);
+    console.log(
+      `      ⚠️ Selectors [${selectors.join(", ")}] returned empty, using auto-detect`
+    );
   }
 
   return extractContentAuto(html);
+}
+
+/**
+ * Main content extraction function.
+ * @param content The raw HTML content string.
+ * @param options Extraction options including selector.
+ * @returns The extracted text content.
+ */
+export function extractContent(
+  content: string,
+  options?: ExtractOptions | string | string[],
+  silent = false
+): string {
+  if (typeof options === "string" || Array.isArray(options)) {
+    return extractHtmlContent(content, options, silent);
+  }
+
+  const { selector, silent: optionsSilent = silent } = options || {};
+
+  return extractHtmlContent(content, selector, optionsSilent);
 }
 
 export function extractTitle(html: string): string {
