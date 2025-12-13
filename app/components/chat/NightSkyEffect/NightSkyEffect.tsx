@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 interface NightSkyEffectProps {
   enabled: boolean;
@@ -23,12 +24,14 @@ interface Tree {
 /**
  * Night sky effect with rotating stars and landscape silhouette.
  * Simulates Earth's rotation with stars circling around the celestial pole.
+ * Respects prefers-reduced-motion accessibility setting.
  */
 export function NightSkyEffect({ enabled }: NightSkyEffectProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const prefersReducedMotion = useReducedMotion();
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || prefersReducedMotion) return;
 
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -207,7 +210,19 @@ export function NightSkyEffect({ enabled }: NightSkyEffectProps) {
       cancelAnimationFrame(animationId);
       window.removeEventListener("resize", resize);
     };
-  }, [enabled]);
+  }, [enabled, prefersReducedMotion]);
+
+  if (prefersReducedMotion && enabled) {
+    return (
+      <div
+        className="absolute inset-0 pointer-events-none z-0"
+        style={{
+          background:
+            "linear-gradient(to bottom, #0a0a1a 0%, #0d1025 30%, #111428 60%, #151830 100%)",
+        }}
+      />
+    );
+  }
 
   if (!enabled) return null;
 

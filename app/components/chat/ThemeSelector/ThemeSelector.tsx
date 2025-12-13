@@ -3,17 +3,79 @@
 import { useState } from "react";
 import { ThemeSelectorProps, ThemeOption, Theme } from "./types";
 
-const themes: ThemeOption[] = [
-  { id: "grey", name: "Grey", color: "#71717a" },
-  { id: "gruvbox", name: "Gruvbox", color: "#fabd2f" },
-  { id: "nord", name: "Nord", color: "#88c0d0" },
-  { id: "tokyo", name: "Tokyo", color: "#bb9af7" },
-  { id: "catppuccin", name: "Catppuccin", color: "#f5c2e7" },
-  { id: "matrix", name: "Matrix", color: "#00ff41" },
-  { id: "christmas", name: "Christmas", color: "#c41e3a" },
-  { id: "space", name: "Space", color: "#818cf8" },
-  { id: "nightsky", name: "Night Sky", color: "#a5b4fc" },
-  { id: "synthwave", name: "Synthwave", color: "#ff00c8" },
+const EFFECT_TOOLTIP = "⚡ Use with care: pretty but a bit resource intensive";
+
+interface ThemeConfig extends ThemeOption {
+  description: string;
+  hasEffect?: boolean;
+}
+
+const themes: ThemeConfig[] = [
+  {
+    id: "grey",
+    name: "Grey",
+    color: "#71717a",
+    description: "Clean minimal dark theme",
+  },
+  {
+    id: "gruvbox",
+    name: "Gruvbox",
+    color: "#fabd2f",
+    description: "Retro groove with warm colors",
+  },
+  {
+    id: "nord",
+    name: "Nord",
+    color: "#88c0d0",
+    description: "Arctic, north-bluish palette",
+  },
+  {
+    id: "tokyo",
+    name: "Tokyo",
+    color: "#bb9af7",
+    description: "Night in Tokyo vibes",
+  },
+  {
+    id: "catppuccin",
+    name: "Catppuccin",
+    color: "#f5c2e7",
+    description: "Soothing pastel theme",
+  },
+  {
+    id: "matrix",
+    name: "Matrix",
+    color: "#00ff41",
+    description: "Enter the Matrix 🐇",
+    hasEffect: true,
+  },
+  {
+    id: "christmas",
+    name: "Christmas",
+    color: "#c41e3a",
+    description: "Festive holiday spirit 🎄",
+    hasEffect: true,
+  },
+  {
+    id: "space",
+    name: "Space",
+    color: "#818cf8",
+    description: "Deep space exploration 🚀",
+    hasEffect: true,
+  },
+  {
+    id: "nightsky",
+    name: "Night Sky",
+    color: "#a5b4fc",
+    description: "Stargazing at midnight ✨",
+    hasEffect: true,
+  },
+  {
+    id: "synthwave",
+    name: "Synthwave",
+    color: "#ff00c8",
+    description: "80s neon retrowave 🌆",
+    hasEffect: true,
+  },
 ];
 
 /**
@@ -78,22 +140,16 @@ export function ThemeSelector({
                 <button
                   onClick={() => handleSelect(theme.id)}
                   className="flex items-center gap-2 flex-1"
+                  data-tooltip={theme.description}
                 >
                   <span
                     className="w-2 h-2 rounded-full"
                     style={{ backgroundColor: theme.color }}
                   />
                   <span>{theme.name}</span>
-                  {currentTheme === theme.id &&
-                    ![
-                      "matrix",
-                      "christmas",
-                      "space",
-                      "nightsky",
-                      "synthwave",
-                    ].includes(theme.id) && (
-                      <span className="ml-auto text-[var(--green)]">✓</span>
-                    )}
+                  {currentTheme === theme.id && !theme.hasEffect && (
+                    <span className="ml-auto text-[var(--green)]">✓</span>
+                  )}
                 </button>
                 {theme.id === "matrix" && (
                   <label
@@ -102,11 +158,9 @@ export function ThemeSelector({
                         ? "opacity-30 cursor-not-allowed"
                         : "cursor-pointer"
                     }`}
-                    title={
-                      currentTheme === "matrix"
-                        ? "Toggle rain effect"
-                        : "Select Matrix theme first"
-                    }
+                    {...(currentTheme === "matrix" && {
+                      "data-tooltip": EFFECT_TOOLTIP,
+                    })}
                   >
                     <span className="text-[var(--fg-dim)] text-xs">+swag?</span>
                     <input
@@ -130,11 +184,9 @@ export function ThemeSelector({
                         ? "opacity-30 cursor-not-allowed"
                         : "cursor-pointer"
                     }`}
-                    title={
-                      currentTheme === "christmas"
-                        ? "Toggle snow effect"
-                        : "Select Christmas theme first"
-                    }
+                    {...(currentTheme === "christmas" && {
+                      "data-tooltip": EFFECT_TOOLTIP,
+                    })}
                   >
                     <span className="text-[var(--fg-dim)] text-xs">+snow?</span>
                     <input
@@ -158,11 +210,9 @@ export function ThemeSelector({
                         ? "opacity-30 cursor-not-allowed"
                         : "cursor-pointer"
                     }`}
-                    title={
-                      currentTheme === "space"
-                        ? "Toggle warp stars effect"
-                        : "Select Space theme first"
-                    }
+                    {...(currentTheme === "space" && {
+                      "data-tooltip": EFFECT_TOOLTIP,
+                    })}
                   >
                     <span className="text-[var(--fg-dim)] text-xs">+warp?</span>
                     <input
@@ -186,11 +236,9 @@ export function ThemeSelector({
                         ? "opacity-30 cursor-not-allowed"
                         : "cursor-pointer"
                     }`}
-                    title={
-                      currentTheme === "nightsky"
-                        ? "Toggle star rotation effect"
-                        : "Select Night Sky theme first"
-                    }
+                    {...(currentTheme === "nightsky" && {
+                      "data-tooltip": EFFECT_TOOLTIP,
+                    })}
                   >
                     <span className="text-[var(--fg-dim)] text-xs">
                       +peace?
@@ -216,11 +264,9 @@ export function ThemeSelector({
                         ? "opacity-30 cursor-not-allowed"
                         : "cursor-pointer"
                     }`}
-                    title={
-                      currentTheme === "synthwave"
-                        ? "Toggle grid effect"
-                        : "Select Synthwave theme first"
-                    }
+                    {...(currentTheme === "synthwave" && {
+                      "data-tooltip": EFFECT_TOOLTIP,
+                    })}
                   >
                     <span className="text-[var(--fg-dim)] text-xs">
                       +vibes?

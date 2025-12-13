@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 interface SpaceEffectProps {
   enabled: boolean;
@@ -18,12 +19,14 @@ interface Star {
 /**
  * Immersive space traversal effect with parallax star layers.
  * Stars move toward the viewer creating a warp-like sensation.
+ * Respects prefers-reduced-motion accessibility setting.
  */
 export function SpaceEffect({ enabled }: SpaceEffectProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const prefersReducedMotion = useReducedMotion();
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || prefersReducedMotion) return;
 
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -140,45 +143,27 @@ export function SpaceEffect({ enabled }: SpaceEffectProps) {
 
         if (alpha <= 0.01) continue;
 
-        const hue = 200 + depth * 60;
-        const saturation = 15 + depth * 40;
-        const lightness = 60 + depth * 35;
+        const hue = Math.round(200 + depth * 60);
+        const saturation = Math.round(15 + depth * 40);
+        const lightness = Math.round(60 + depth * 35);
 
         ctx.beginPath();
         ctx.moveTo(prevScreenX, prevScreenY);
         ctx.lineTo(screenX, screenY);
-
-        const gradient = ctx.createLinearGradient(
-          prevScreenX,
-          prevScreenY,
-          screenX,
-          screenY
-        );
-        gradient.addColorStop(
-          0,
-          `hsla(${hue}, ${saturation}%, ${lightness}%, ${alpha * 0.1})`
-        );
-        gradient.addColorStop(
-          1,
-          `hsla(${hue}, ${saturation}%, ${lightness}%, ${alpha})`
-        );
-
-        ctx.strokeStyle = gradient;
+        ctx.strokeStyle = `hsla(${hue}, ${saturation}%, ${lightness}%, ${(alpha * 0.4).toFixed(2)})`;
         ctx.lineWidth = radius;
         ctx.lineCap = "round";
         ctx.stroke();
 
         ctx.beginPath();
         ctx.arc(screenX, screenY, radius * 0.8, 0, Math.PI * 2);
-        ctx.fillStyle = `hsla(${hue}, ${saturation}%, ${lightness}%, ${alpha})`;
+        ctx.fillStyle = `hsla(${hue}, ${saturation}%, ${lightness}%, ${alpha.toFixed(2)})`;
         ctx.fill();
 
         if (depth > 0.7) {
           ctx.beginPath();
           ctx.arc(screenX, screenY, radius * 2, 0, Math.PI * 2);
-          ctx.fillStyle = `hsla(${hue}, ${saturation}%, ${lightness}%, ${
-            alpha * 0.08
-          })`;
+          ctx.fillStyle = `hsla(${hue}, ${saturation}%, ${lightness}%, ${(alpha * 0.08).toFixed(2)})`;
           ctx.fill();
         }
       }
@@ -195,7 +180,21 @@ export function SpaceEffect({ enabled }: SpaceEffectProps) {
       cancelAnimationFrame(animationId);
       window.removeEventListener("resize", resize);
     };
-  }, [enabled]);
+  }, [enabled, prefersReducedMotion]);
+
+  if (prefersReducedMotion && enabled) {
+    return (
+      <div
+        className="absolute inset-0 pointer-events-none z-0"
+        style={{
+          background:
+            "radial-gradient(ellipse at 20% 30%, rgba(88, 28, 135, 0.08) 0%, transparent 50%), " +
+            "radial-gradient(ellipse at 80% 70%, rgba(30, 58, 138, 0.06) 0%, transparent 40%), " +
+            "rgb(3, 7, 18)",
+        }}
+      />
+    );
+  }
 
   if (!enabled) return null;
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 interface SynthwaveEffectProps {
   enabled: boolean;
@@ -9,12 +10,14 @@ interface SynthwaveEffectProps {
 /**
  * Synthwave/retrowave effect with neon grid and horizon sun.
  * Subtle 80s aesthetic with slow-moving perspective grid.
+ * Respects prefers-reduced-motion accessibility setting.
  */
 export function SynthwaveEffect({ enabled }: SynthwaveEffectProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const prefersReducedMotion = useReducedMotion();
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || prefersReducedMotion) return;
 
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -228,7 +231,21 @@ export function SynthwaveEffect({ enabled }: SynthwaveEffectProps) {
       cancelAnimationFrame(animationId);
       window.removeEventListener("resize", resize);
     };
-  }, [enabled]);
+  }, [enabled, prefersReducedMotion]);
+
+  if (prefersReducedMotion && enabled) {
+    return (
+      <div
+        className="absolute inset-0 pointer-events-none z-0"
+        style={{
+          background:
+            "linear-gradient(to bottom, " +
+            "#0a0010 0%, #1a0a2e 40%, #2d1b4e 60%, " +
+            "rgba(255, 100, 150, 0.1) 75%, #0a0010 100%)",
+        }}
+      />
+    );
+  }
 
   if (!enabled) return null;
 

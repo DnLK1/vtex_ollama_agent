@@ -1,16 +1,22 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 interface MatrixRainProps {
   enabled: boolean;
 }
 
+/**
+ * Matrix-style falling binary rain effect.
+ * Respects prefers-reduced-motion accessibility setting.
+ */
 export function MatrixRain({ enabled }: MatrixRainProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const prefersReducedMotion = useReducedMotion();
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || prefersReducedMotion) return;
 
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -34,6 +40,10 @@ export function MatrixRain({ enabled }: MatrixRainProps) {
 
     const chars = "01";
 
+    const targetFps = 20;
+    const frameInterval = 1000 / targetFps;
+    let lastFrameTime = 0;
+
     const draw = () => {
       ctx.fillStyle = "rgba(0, 0, 0, 0.05)";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -56,13 +66,38 @@ export function MatrixRain({ enabled }: MatrixRainProps) {
       }
     };
 
-    const interval = setInterval(draw, 50);
+    let animationId: number;
+    const animate = (currentTime: number) => {
+      animationId = requestAnimationFrame(animate);
+
+      const deltaTime = currentTime - lastFrameTime;
+      if (deltaTime < frameInterval) return;
+      lastFrameTime = currentTime - (deltaTime % frameInterval);
+
+      draw();
+    };
+    animationId = requestAnimationFrame(animate);
 
     return () => {
-      clearInterval(interval);
+      cancelAnimationFrame(animationId);
       window.removeEventListener("resize", resize);
     };
-  }, [enabled]);
+  }, [enabled, prefersReducedMotion]);
+
+  if (prefersReducedMotion && enabled) {
+    return (
+      <div
+        className="absolute inset-0 pointer-events-none z-0"
+        style={{
+          background:
+            "repeating-linear-gradient(0deg, " +
+            "transparent, transparent 14px, " +
+            "rgba(0, 255, 65, 0.03) 14px, rgba(0, 255, 65, 0.03) 15px)",
+          opacity: 0.15,
+        }}
+      />
+    );
+  }
 
   if (!enabled) return null;
 

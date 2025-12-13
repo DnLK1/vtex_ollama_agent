@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 interface SnowEffectProps {
   enabled: boolean;
@@ -8,12 +9,14 @@ interface SnowEffectProps {
 
 /**
  * Winter scene with mountains, trees, and falling snow for the Christmas theme.
+ * Respects prefers-reduced-motion accessibility setting.
  */
 export function SnowEffect({ enabled }: SnowEffectProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const prefersReducedMotion = useReducedMotion();
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || prefersReducedMotion) return;
 
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -35,6 +38,10 @@ export function SnowEffect({ enabled }: SnowEffectProps) {
     };
     resize();
     window.addEventListener("resize", resize);
+
+    const targetFps = 30;
+    const frameInterval = 1000 / targetFps;
+    let lastFrameTime = 0;
 
     interface Snowflake {
       x: number;
@@ -190,13 +197,38 @@ export function SnowEffect({ enabled }: SnowEffectProps) {
       drawSnow();
     };
 
-    const interval = setInterval(draw, 33);
+    let animationId: number;
+    const animate = (currentTime: number) => {
+      animationId = requestAnimationFrame(animate);
+
+      const deltaTime = currentTime - lastFrameTime;
+      if (deltaTime < frameInterval) return;
+      lastFrameTime = currentTime - (deltaTime % frameInterval);
+
+      draw();
+    };
+    animationId = requestAnimationFrame(animate);
 
     return () => {
-      clearInterval(interval);
+      cancelAnimationFrame(animationId);
       window.removeEventListener("resize", resize);
     };
-  }, [enabled]);
+  }, [enabled, prefersReducedMotion]);
+
+  if (prefersReducedMotion && enabled) {
+    return (
+      <div
+        className="absolute inset-0 pointer-events-none z-0"
+        style={{
+          background:
+            "linear-gradient(to bottom, " +
+            "rgba(200, 205, 215, 0.1) 0%, " +
+            "rgba(185, 190, 205, 0.15) 50%, " +
+            "rgba(170, 180, 195, 0.2) 100%)",
+        }}
+      />
+    );
+  }
 
   if (!enabled) return null;
 
