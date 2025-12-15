@@ -1,7 +1,17 @@
 {
   "name": "vtex-agent",
   "version": "0.1.0",
-  "private": true,
+  "description": "A local RAG agent that answers questions using documentation. Runs with Ollama + ChromaDB.",
+  "license": "MIT",
+  "keywords": [
+    "rag",
+    "ollama",
+    "chromadb",
+    "llm",
+    "documentation",
+    "chatbot",
+    "nextjs"
+  ],
   "scripts": {
     "dev": "next dev",
     "build": "next build",

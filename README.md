@@ -1,6 +1,20 @@
 # VTEX Docs Agent
 
-A local RAG (Retrieval Augmented Generation) agent that answers questions using VTEX documentation. Runs entirely on your machine with Ollama + Chroma.
+[![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Next.js](https://img.shields.io/badge/Next.js-16-black)](https://nextjs.org/)
+[![Ollama](https://img.shields.io/badge/Ollama-Local%20LLM-blue)](https://ollama.ai/)
+
+A local RAG (Retrieval Augmented Generation) agent that answers questions using documentation. Runs entirely on your machine with Ollama + ChromaDB.
+
+![Chat Interface](https://img.shields.io/badge/UI-Themed%20Chat-purple)
+
+## ✨ Features
+
+- **🏠 Local-first** - Runs entirely on your machine, no cloud dependencies
+- **🎨 Beautiful UI** - Multiple themes with animated background effects
+- **📚 Flexible ingestion** - Sitemaps, URLs, OpenAPI schemas, or manual docs
+- **⚡ Fast** - GPU-accelerated embeddings with Ollama
+- **🐳 Docker ready** - One-command setup with Docker Compose
 
 ## Quick Start
 
@@ -10,20 +24,23 @@ A local RAG (Retrieval Augmented Generation) agent that answers questions using 
 # 1. Install dependencies
 pnpm install
 
-# 2. Start Chroma (vector DB)
+# 2. Copy environment config
+cp .env.example .env
+
+# 3. Start Chroma (vector DB)
 docker compose up chroma -d
 
-# 3. Start Ollama (if not already running)
+# 4. Start Ollama (if not already running)
 ollama serve
 
-# 4. Pull models
-ollama pull llama3.1:8b
+# 5. Pull models
+ollama pull qwen2.5:7b
 ollama pull mxbai-embed-large
 
-# 5. Ingest documentation
+# 6. Ingest documentation
 pnpm chroma:sync
 
-# 6. Run the app
+# 7. Run the app
 pnpm dev
 ```
 
@@ -85,7 +102,7 @@ pnpm docker:app
 └─────────────┘     └─────────────┘     └─────────────┘
 ```
 
-- **Ollama** - Local LLM (llama3.1:8b) + embeddings (mxbai-embed-large)
+- **Ollama** - Local LLM (qwen2.5:7b) + embeddings (mxbai-embed-large)
 - **Chroma** - Vector database for semantic search (v2 REST API)
 - **Next.js** - Frontend + API
 
@@ -97,15 +114,24 @@ vtex-agent/
 │   ├── api/
 │   │   ├── ask/route.ts        # RAG API endpoint
 │   │   └── health/route.ts     # Health check
-│   ├── components/             # Chat UI components
+│   ├── components/
+│   │   ├── chat/               # Chat UI components
+│   │   └── themes/             # Animated background effects
 │   └── page.tsx                # Chat UI
 ├── lib/
-│   ├── chroma-rest.ts          # Direct REST API client (ChromaDB + Ollama)
+│   ├── chroma-rest.ts          # Direct REST API client (ChromaDB)
+│   ├── embeddings.ts           # Ollama embeddings
+│   ├── llm.ts                  # Ollama LLM client
 │   ├── cache.ts                # Disk-based caching utilities
 │   ├── chunking.ts             # Text chunking with overlap
 │   ├── content.ts              # HTML content extraction
 │   ├── fetcher.ts              # Concurrent HTTP fetching
 │   └── constants.ts            # App constants
+├── hooks/
+│   ├── useChat.ts              # Chat state management
+│   ├── useCanvasAnimation.ts   # Animation hook for themes
+│   └── useReducedMotion.ts     # Accessibility hook
+├── types/                      # TypeScript types
 ├── data/
 │   ├── aliases.json            # Query expansion aliases
 │   ├── manual-docs.json        # Curated documentation
@@ -247,24 +273,44 @@ Use the "Duck Rule" to check if contexts are being applied correctly.
 
 ## Environment Variables
 
-| Variable       | Default                  | Description    |
-| -------------- | ------------------------ | -------------- |
-| `OLLAMA_HOST`  | `http://localhost:11434` | Ollama API URL |
-| `CHROMA_HOST`  | `http://localhost:8000`  | Chroma API URL |
-| `OLLAMA_MODEL` | `llama3.1:8b`            | Chat model     |
+| Variable                 | Default                  | Description                  |
+| ------------------------ | ------------------------ | ---------------------------- |
+| `OLLAMA_HOST`            | `http://localhost:11434` | Ollama API URL               |
+| `OLLAMA_MODEL`           | `qwen2.5:7b`             | Chat model                   |
+| `OLLAMA_EMBEDDING_MODEL` | `mxbai-embed-large`      | Embedding model              |
+| `CHROMA_HOST`            | `http://localhost:8000`  | ChromaDB API URL             |
+| `CHROMA_API_KEY`         | -                        | Chroma Cloud API key         |
+| `CHROMA_TENANT`          | `default_tenant`         | Chroma Cloud tenant          |
+| `CHROMA_DATABASE`        | `default_database`       | Chroma Cloud database        |
 
 ## UI Themes
 
-The chat interface includes multiple themes inspired by popular coding color schemes:
+The chat interface includes multiple themes with optional animated effects:
 
-- **Grey** (default) - Clean dark grey
-- **Gruvbox** - Warm retro colors
-- **Nord** - Arctic, bluish tones
-- **Tokyo** - Purple-tinted night theme
-- **Catppuccin** - Pastel Mocha
-- **Matrix** - Green terminal aesthetic
+### Simple Themes
+| Theme | Description |
+|-------|-------------|
+| Grey | Clean dark grey (default) |
+| Gruvbox | Warm retro colors |
+| Nord | Arctic, bluish tones |
+| Tokyo | Purple-tinted night |
+| Catppuccin | Pastel Mocha |
+| Solarized Light | Warm light theme |
+| GitHub Light | Clean light theme |
 
-Select your theme from the dropdown in the header.
+### Animated Themes
+| Theme | Effect |
+|-------|--------|
+| Matrix | Falling green code rain |
+| Winter | Gentle falling snow |
+| Space | Hyperspace warp stars |
+| Night Sky | Twinkling stars |
+| Synthwave | Retro 80s grid |
+| Ocean | Floating bubbles |
+| Cyberpunk | Neon rain city |
+| Sakura | Falling cherry blossoms |
+
+> **Note**: Animated effects can be toggled on/off per theme. They respect `prefers-reduced-motion` for accessibility.
 
 ## How It Works
 
@@ -283,6 +329,8 @@ All ingestion scripts share common utilities:
 | Library              | Purpose                                      |
 | -------------------- | -------------------------------------------- |
 | `lib/chroma-rest.ts` | Direct REST API calls to ChromaDB and Ollama |
+| `lib/embeddings.ts`  | Embedding generation via Ollama              |
+| `lib/llm.ts`         | Chat completion via Ollama                   |
 | `lib/cache.ts`       | Disk-based caching with TTL                  |
 | `lib/chunking.ts`    | Sentence-aware text chunking with overlap    |
 | `lib/content.ts`     | HTML content extraction with Cheerio         |
@@ -295,6 +343,7 @@ All ingestion scripts share common utilities:
 - **Memory isolation**: Large batch processing in child processes
 - **Collection caching**: Collection ID cached to avoid repeated lookups
 - **Relative source filtering**: Only shows sources within 70% of top result's score
+- **Animation throttling**: Canvas effects use `requestAnimationFrame` with FPS limits
 
 ## GPU Support
 
@@ -326,5 +375,19 @@ nvidia-smi
 
 | Model               | Purpose    | Size  |
 | ------------------- | ---------- | ----- |
-| `llama3.1:8b`       | Chat/LLM   | 4.7GB |
+| `qwen2.5:7b`        | Chat/LLM   | 4.7GB |
 | `mxbai-embed-large` | Embeddings | 670MB |
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
