@@ -51,8 +51,15 @@ export function useChat() {
         });
 
         if (!res.ok) {
-          const errorData = await res.json();
-          throw new Error(errorData.error || "Request failed");
+          let errorMessage = `Request failed (${res.status})`;
+          try {
+            const errorData = await res.json();
+            errorMessage = errorData.error || errorData.message || errorMessage;
+          } catch {
+            const text = await res.text().catch(() => "");
+            if (text) errorMessage = text;
+          }
+          throw new Error(errorMessage);
         }
 
         const reader = res.body?.getReader();

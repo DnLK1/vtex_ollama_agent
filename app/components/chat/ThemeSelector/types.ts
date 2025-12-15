@@ -29,22 +29,8 @@ export type Theme =
 export interface ThemeSelectorProps {
   currentTheme: Theme;
   onThemeChange: (theme: Theme) => void;
-  matrixRain: boolean;
-  onMatrixRainChange: (enabled: boolean) => void;
-  christmasSnow: boolean;
-  onChristmasSnowChange: (enabled: boolean) => void;
-  spaceStars: boolean;
-  onSpaceStarsChange: (enabled: boolean) => void;
-  nightSkyRotation: boolean;
-  onNightSkyRotationChange: (enabled: boolean) => void;
-  synthwaveGrid: boolean;
-  onSynthwaveGridChange: (enabled: boolean) => void;
-  oceanBubbles: boolean;
-  onOceanBubblesChange: (enabled: boolean) => void;
-  cyberpunkRain: boolean;
-  onCyberpunkRainChange: (enabled: boolean) => void;
-  sakuraPetals: boolean;
-  onSakuraPetalsChange: (enabled: boolean) => void;
+  effectsEnabled: boolean;
+  onEffectsChange: (enabled: boolean) => void;
 }
 
 /**

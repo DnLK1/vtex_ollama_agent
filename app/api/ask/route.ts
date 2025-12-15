@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
 import { queryDocs } from "@/lib/chroma-rest";
+import {
+  chatCompletion,
+  chatCompletionStream,
+  getDefaultModel,
+  getProvider,
+} from "@/lib/llm";
 import { MIN_RELEVANCE_SCORE, DEFAULT_TOP_K } from "@/lib/constants";
 import aliases from "@/data/aliases.json";
 import type { ApiMessage, Source, QueryResult } from "@/types";
-
-const OLLAMA_HOST = process.env.OLLAMA_HOST || "http://localhost:11434";
-const DEFAULT_MODEL = process.env.OLLAMA_MODEL || "llama3.1:8b";
 
 /**
  * Extracts unique sources from retrieved docs using relative threshold.
@@ -101,7 +104,7 @@ export async function POST(req: Request) {
   try {
     const {
       messages: rawMessages,
-      model = DEFAULT_MODEL,
+      model = getDefaultModel(),
       stream = false,
       useRAG = true,
       topK = DEFAULT_TOP_K,
@@ -142,80 +145,42 @@ export async function POST(req: Request) {
     }
 
     if (!stream) {
-      const response = await fetch(`${OLLAMA_HOST}/api/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model,
-          messages: augmentedMessages,
-          stream: false,
-        }),
-      });
-
-      if (!response.ok) {
-        return NextResponse.json(
-          { error: "Ollama error", details: await response.text() },
-          { status: 500 }
-        );
-      }
-
-      const json = await response.json();
+      const response = await chatCompletion(augmentedMessages, model);
       return NextResponse.json({
-        output: json.message.content,
+        output: response.content,
         sources,
+        provider: getProvider(),
       });
-    }
-
-    const ollamaStream = await fetch(`${OLLAMA_HOST}/api/chat`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model,
-        messages: augmentedMessages,
-        stream: true,
-      }),
-    });
-
-    if (!ollamaStream.ok) {
-      return NextResponse.json(
-        { error: "Ollama stream error", details: await ollamaStream.text() },
-        { status: 500 }
-      );
     }
 
     const encoder = new TextEncoder();
-    const decoder = new TextDecoder();
 
     const streamBody = new ReadableStream({
       async start(controller) {
-        const reader = ollamaStream.body!.getReader();
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          const text = decoder.decode(value);
-
-          for (const line of text.split("\n")) {
-            if (!line.trim()) continue;
-
-            const json = JSON.parse(line);
-            const chunk = json.message?.content ?? "";
-
-            controller.enqueue(
-              encoder.encode(
-                `data: ${JSON.stringify({ type: "chunk", content: chunk })}\n\n`
-              )
-            );
-          }
-        }
-
-        controller.enqueue(
-          encoder.encode(
-            `data: ${JSON.stringify({ type: "done", sources })}\n\n`
-          )
+        await chatCompletionStream(
+          augmentedMessages,
+          {
+            onChunk: (chunk) => {
+              controller.enqueue(
+                encoder.encode(
+                  `data: ${JSON.stringify({
+                    type: "chunk",
+                    content: chunk,
+                  })}\n\n`
+                )
+              );
+            },
+            onDone: () => {
+              controller.enqueue(
+                encoder.encode(
+                  `data: ${JSON.stringify({ type: "done", sources })}\n\n`
+                )
+              );
+              controller.close();
+            },
+          },
+          model
         );
-        controller.close();
       },
     });
 

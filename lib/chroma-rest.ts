@@ -1,24 +1,38 @@
 /**
- * Direct REST API client for ChromaDB and Ollama.
- * Bypasses chromadb-js to avoid V8 array size crashes.
+ * Direct REST API client for ChromaDB.
+ * Supports both local ChromaDB and Chroma Cloud.
  * Uses ChromaDB v2 API.
  */
 
 import type {
-  OllamaEmbeddingResponse,
   ChromaCollection,
   DocToUpsert,
   QueryResult,
   CollectionStats,
 } from "@/types";
+import { getEmbedding, getEmbeddings } from "./embeddings";
 
 export type { DocToUpsert, QueryResult };
 
 const CHROMA_HOST = process.env.CHROMA_HOST || "http://localhost:8000";
-const OLLAMA_HOST = process.env.OLLAMA_HOST || "http://localhost:11434";
+const CHROMA_API_KEY = process.env.CHROMA_API_KEY || "";
+const CHROMA_TENANT = process.env.CHROMA_TENANT || "default_tenant";
+const CHROMA_DATABASE = process.env.CHROMA_DATABASE || "default_database";
 const COLLECTION_NAME = "docs";
-const EMBEDDING_MODEL = "mxbai-embed-large";
-const CHROMA_API_BASE = `${CHROMA_HOST}/api/v2/tenants/default_tenant/databases/default_database`;
+
+const CHROMA_API_BASE = `${CHROMA_HOST}/api/v2/tenants/${CHROMA_TENANT}/databases/${CHROMA_DATABASE}`;
+
+/**
+ * Gets headers for Chroma API requests.
+ * Includes auth token for Chroma Cloud.
+ */
+function getChromaHeaders(): HeadersInit {
+  const headers: HeadersInit = { "Content-Type": "application/json" };
+  if (CHROMA_API_KEY) {
+    headers["X-Chroma-Token"] = CHROMA_API_KEY;
+  }
+  return headers;
+}
 
 /**
  * Removes lone UTF-16 surrogates that break JSON serialization.
@@ -46,24 +60,12 @@ function sanitizeText(text: string): string {
 
 let cachedCollectionId: string | null = null;
 
-async function getEmbedding(text: string): Promise<number[]> {
-  const response = await fetch(`${OLLAMA_HOST}/api/embeddings`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ model: EMBEDDING_MODEL, prompt: text }),
-  });
-
-  if (!response.ok)
-    throw new Error(`Ollama embedding failed: ${response.status}`);
-
-  const data: OllamaEmbeddingResponse = await response.json();
-  return data.embedding;
-}
-
 async function getOrCreateCollection(): Promise<string> {
   if (cachedCollectionId) return cachedCollectionId;
 
-  const listRes = await fetch(`${CHROMA_API_BASE}/collections`);
+  const listRes = await fetch(`${CHROMA_API_BASE}/collections`, {
+    headers: getChromaHeaders(),
+  });
   if (!listRes.ok)
     throw new Error(`Failed to list collections: ${listRes.status}`);
 
@@ -78,7 +80,7 @@ async function getOrCreateCollection(): Promise<string> {
 
   const createRes = await fetch(`${CHROMA_API_BASE}/collections`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: getChromaHeaders(),
     body: JSON.stringify({
       name: COLLECTION_NAME,
       metadata: { description: "Documentation embeddings for RAG" },
@@ -103,16 +105,13 @@ export async function upsertDocsBatch(docs: DocToUpsert[]): Promise<number> {
     text: sanitizeText(doc.text),
   }));
 
-  const embeddings: number[][] = [];
-  for (const doc of sanitizedDocs) {
-    embeddings.push(await getEmbedding(doc.text));
-  }
+  const embeddings = await getEmbeddings(sanitizedDocs.map((doc) => doc.text));
 
   const upsertRes = await fetch(
     `${CHROMA_API_BASE}/collections/${collectionId}/upsert`,
     {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: getChromaHeaders(),
       body: JSON.stringify({
         ids: sanitizedDocs.map((doc) => doc.id),
         documents: sanitizedDocs.map((doc) => doc.text),
@@ -136,7 +135,9 @@ export async function upsertDocsBatch(docs: DocToUpsert[]): Promise<number> {
 }
 
 export async function getCollectionStatsRest(): Promise<CollectionStats> {
-  const listRes = await fetch(`${CHROMA_API_BASE}/collections`);
+  const listRes = await fetch(`${CHROMA_API_BASE}/collections`, {
+    headers: getChromaHeaders(),
+  });
   if (!listRes.ok) return { count: 0, name: COLLECTION_NAME };
 
   const collections: ChromaCollection[] = await listRes.json();
@@ -146,7 +147,8 @@ export async function getCollectionStatsRest(): Promise<CollectionStats> {
   if (!existing) return { count: 0, name: COLLECTION_NAME };
 
   const countRes = await fetch(
-    `${CHROMA_API_BASE}/collections/${existing.id}/count`
+    `${CHROMA_API_BASE}/collections/${existing.id}/count`,
+    { headers: getChromaHeaders() }
   );
   if (!countRes.ok) return { count: 0, name: COLLECTION_NAME };
 
@@ -165,7 +167,7 @@ export async function queryDocs(
     `${CHROMA_API_BASE}/collections/${collectionId}/query`,
     {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: getChromaHeaders(),
       body: JSON.stringify({
         query_embeddings: [queryEmbedding],
         n_results: topK,
